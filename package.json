@@ -8,10 +8,14 @@
     "dev": "ts-node src/server.ts",
     "postinstall": "npm run build"
   },
+  "engines": {
+    "node": "18.x"
+  },
   "dependencies": {
     "@elastic/elasticsearch": "^8.19.1",
     "@slack/web-api": "^6.13.0",
     "@xenova/transformers": "^2.17.2",
+    "axios": "^1.6.0",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -24,26 +28,15 @@
     "p-queue": "^9.0.0"
   },
   "devDependencies": {
+    "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
     "@types/imap": "^0.8.42",
     "@types/mailparser": "^3.4.6",
-    "@types/node": "^24.10.0",
+    "@types/node": "^18.19.0",
     "cross-env": "^10.1.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.3.3"
   },
-  "description": "",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ruthvik-mt/reachinbox-onebox.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/ruthvik-mt/reachinbox-onebox/issues"
-  },
-  "homepage": "https://github.com/ruthvik-mt/reachinbox-onebox#readme"
+  "type": "commonjs"
 }
