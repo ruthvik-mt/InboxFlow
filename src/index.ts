@@ -174,12 +174,21 @@ if (missingVars.length > 0) {
 
 // Express app
 const app = express();
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,https://reachinbox-onebox.vercel.app')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+console.log('Allowed CORS origins:', allowedOrigins);
+
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://reachinbox-oneboxai.vercel.app/',
-    /\.vercel\.app$/
-  ],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (/^https?:\/\/(.+\.)?vercel\.app$/.test(origin)) return callback(null, true);
+    console.warn('Blocked CORS origin:', origin);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json());
