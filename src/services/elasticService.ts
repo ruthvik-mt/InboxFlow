@@ -15,7 +15,7 @@ const clientOptions: any = {
   requestTimeout: 30000,
 };
 
-// If API key present, use it (works for Elastic Cloud)
+// API key
 if (ES_APIKEY) {
   clientOptions.auth = { apiKey: ES_APIKEY };
 }
@@ -88,7 +88,7 @@ async function initializeElasticsearch() {
 }
 initializeElasticsearch();
 
-// deterministic id helper (keeps same logic you had)
+// Deterministic ID
 function makeEsId(email: any) {
   const mid = (email.messageId || '').toString().trim();
   const cleanMid = mid.replace(/[<>]/g, '');
@@ -99,20 +99,15 @@ function makeEsId(email: any) {
   return `${account}:${cleanMid}`;
 }
 
-/**
- * Helper: take mailparser / imap `from` or `to` value (string | object | array)
- * and return pretty string + raw address for indexing.
- */
+//mailparser
 function formatEmailAddressField(value: any): { pretty: string; address: string } {
   if (!value) return { pretty: '', address: '' };
-
-  // If already a string, try to extract the email address
+ 
   if (typeof value === 'string') {
     const addrMatch = value.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
     return { pretty: value, address: addrMatch ? addrMatch[1] : '' };
   }
 
-  // If array, map each and join
   if (Array.isArray(value)) {
     const parts = value.map(v => formatEmailAddressField(v));
     return {
@@ -120,10 +115,8 @@ function formatEmailAddressField(value: any): { pretty: string; address: string 
       address: parts.map(p => p.address).filter(Boolean).join(', ')
     };
   }
-
-  // If object (mailparser often gives { address, name } or { value: ... })
+ 
   if (typeof value === 'object') {
-    // mailparser sometimes provides { value: [ { address, name } ] }
     if (Array.isArray(value.value)) {
       const parts = value.value.map((v: any) => formatEmailAddressField(v));
       return {
