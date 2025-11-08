@@ -1,4 +1,3 @@
-// src/services/imapService.ts
 import Imap from 'imap';
 import { simpleParser, ParsedMail } from 'mailparser';
 import { indexEmail } from './elasticService';
@@ -21,10 +20,12 @@ interface Email {
 
 const processedMessageIds = new Set<string>();
 
-// Queue
 const EMAIL_PROCESSING_QUEUE: Array<{email: Email; retries: number}> = [];
 let isProcessingQueue = false;
 const MAX_PROCESSING_RETRIES = 3;
+
+const EMAIL_BATCH_SIZE = Number(process.env.EMAIL_BATCH_SIZE || 10);
+const EMAIL_BATCH_DELAY_MS = Number(process.env.EMAIL_BATCH_DELAY_MS || 30000);
 
 function addressToString(addr: any): string {
   if (!addr) return '';
@@ -45,10 +46,11 @@ function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Process email queue
 async function processEmailQueue() {
   if (isProcessingQueue) return;
   isProcessingQueue = true;
+
+  let processedCount = 0;
 
   while (EMAIL_PROCESSING_QUEUE.length > 0) {
     const item = EMAIL_PROCESSING_QUEUE.shift();
@@ -57,11 +59,9 @@ async function processEmailQueue() {
     const { email, retries } = item;
 
     try {
-      // AI categorization
       const classification = await categorizeEmail(email.subject || '', email.body || '');
       email.category = normalizeCategory(classification?.label ?? classification);
 
-      // Index to Elasticsearch
       try {
         await indexEmail(email);
       } catch (indexErr) {
@@ -71,7 +71,6 @@ async function processEmailQueue() {
         if (dedupeKey) processedMessageIds.delete(dedupeKey);
       }
 
-      // Notify only for "Interested" emails
       if (email.category === 'Interested') {
         notifySlack(email).catch((e) =>
           console.error(`[${email.account}] Slack notify error:`, e)
@@ -82,8 +81,16 @@ async function processEmailQueue() {
       }
 
       console.log(`[${email.account}] ${email.subject || '(no subject)'} | ${email.category}`);
-    
-      await sleep(500);
+
+      processedCount++;
+
+      if (processedCount % EMAIL_BATCH_SIZE === 0 && EMAIL_PROCESSING_QUEUE.length > 0) {
+        console.log(`[Batch Processing] Processed ${processedCount} emails. Pausing for ${EMAIL_BATCH_DELAY_MS/1000}s...`);
+        console.log(`[Batch Processing] Remaining in queue: ${EMAIL_PROCESSING_QUEUE.length}`);
+        await sleep(EMAIL_BATCH_DELAY_MS);
+      } else {
+        await sleep(500);
+      }
 
     } catch (error: any) {
       console.error(
@@ -91,18 +98,24 @@ async function processEmailQueue() {
         error?.message || error
       );
 
-      // Retry logic
       if (retries < MAX_PROCESSING_RETRIES - 1) {
         EMAIL_PROCESSING_QUEUE.push({ email, retries: retries + 1 });
         await sleep(2000 * (retries + 1));
       } else {
         console.error(`[${email.account}] Gave up after ${MAX_PROCESSING_RETRIES} attempts`);
         email.category = 'Not Interested';
+        
+        try {
+          await indexEmail(email);
+        } catch (e) {
+          console.error(`[${email.account}] Failed to index after giving up:`, e);
+        }
       }
     }
   }
 
   isProcessingQueue = false;
+  console.log(`[Batch Processing] Completed processing ${processedCount} emails`);
 }
 
 export class ImapService {
@@ -135,7 +148,6 @@ export class ImapService {
         console.log(`[${this.accountName}] IMAP connected. Total messages: ${box.messages.total}`);
         this.fetchRecentEmails();
 
-        // Listener for new emails
         this.imap.removeAllListeners('mail');
         this.imap.on('mail', () => {
           console.log(`[${this.accountName}] New mail notification received`);
@@ -168,7 +180,7 @@ export class ImapService {
     }
 
     const sinceDate = new Date();
-    sinceDate.setDate(sinceDate.getDate() - 30);
+    sinceDate.setDate(sinceDate.getDate() - 7);
 
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     const sinceStr = `${sinceDate.getDate()}-${months[sinceDate.getMonth()]}-${sinceDate.getFullYear()}`;
@@ -208,7 +220,7 @@ export class ImapService {
               `${(parsed.subject || '').slice(0, 200)}|${addressToString(parsed.from)}|${String(parsed.date || '')}`;
 
             if (dedupeKey && processedMessageIds.has(dedupeKey)) {
-              return; // Skip duplicate
+              return;
             }
 
             const email: Email = {
@@ -225,9 +237,8 @@ export class ImapService {
 
             processedMessageIds.add(dedupeKey);
 
-            // Queue
             EMAIL_PROCESSING_QUEUE.push({ email, retries: 0 });
-           
+
             processEmailQueue().catch(err =>
               console.error(`[${this.accountName}] Queue processor error:`, err)
             );
@@ -249,7 +260,6 @@ export class ImapService {
   }
 }
 
-// Monitor queue size
 setInterval(() => {
   if (EMAIL_PROCESSING_QUEUE.length > 10) {
     console.log(`[Email Processing Queue] ${EMAIL_PROCESSING_QUEUE.length} emails waiting`);
