@@ -13,7 +13,7 @@ const clientConfig: any = {
   requestTimeout: 30000,
 };
 
-// prefer API key if provided (encoded form from Elastic Cloud)
+// API key auth
 if (process.env.ELASTICSEARCH_APIKEY) {
   clientConfig.auth = { apiKey: process.env.ELASTICSEARCH_APIKEY };
 } else if (process.env.ELASTICSEARCH_USERNAME || process.env.ELASTICSEARCH_PASSWORD) {
