@@ -145,7 +145,7 @@ export const indexEmail = async (email: any): Promise<boolean> => {
     const response = await esClient.index({
     index: ELASTICSEARCH_INDEX,
     id: docId,
-    body: document, 
+    body: document,
     });
   
     const result = (response as any).result || ((response as any).body && (response as any).body.result);
