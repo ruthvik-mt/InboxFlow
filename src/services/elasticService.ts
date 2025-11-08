@@ -62,7 +62,9 @@ async function initializeElasticsearch() {
           mappings: {
             properties: {
               from: { type: 'text', fields: { keyword: { type: 'keyword' } } },
+              from_address: { type: 'keyword' },
               to: { type: 'text', fields: { keyword: { type: 'keyword' } } },
+              to_address: { type: 'keyword' },
               subject: { type: 'text', fields: { keyword: { type: 'keyword' } } },
               body: { type: 'text' },
               date: { type: 'date' },
@@ -97,9 +99,53 @@ function makeEsId(email: any) {
   return `${account}:${cleanMid}`;
 }
 
+/**
+ * Helper: take mailparser / imap `from` or `to` value (string | object | array)
+ * and return pretty string + raw address for indexing.
+ */
+function formatEmailAddressField(value: any): { pretty: string; address: string } {
+  if (!value) return { pretty: '', address: '' };
+
+  // If already a string, try to extract the email address
+  if (typeof value === 'string') {
+    const addrMatch = value.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+    return { pretty: value, address: addrMatch ? addrMatch[1] : '' };
+  }
+
+  // If array, map each and join
+  if (Array.isArray(value)) {
+    const parts = value.map(v => formatEmailAddressField(v));
+    return {
+      pretty: parts.map(p => p.pretty || p.address).filter(Boolean).join(', '),
+      address: parts.map(p => p.address).filter(Boolean).join(', ')
+    };
+  }
+
+  // If object (mailparser often gives { address, name } or { value: ... })
+  if (typeof value === 'object') {
+    // mailparser sometimes provides { value: [ { address, name } ] }
+    if (Array.isArray(value.value)) {
+      const parts = value.value.map((v: any) => formatEmailAddressField(v));
+      return {
+        pretty: parts.map((p: any) => p.pretty || p.address).filter(Boolean).join(', '),
+        address: parts.map((p: any) => p.address).filter(Boolean).join(', ')
+      };
+    }
+
+    const addr = value.address || value.value || value.addr || '';
+    const name = value.name || value.displayName || value.personal || '';
+    const address = typeof addr === 'string' ? addr : '';
+    const pretty = name ? `${name} <${address}>` : (address || JSON.stringify(value));
+    return { pretty: String(pretty), address: address || '' };
+  }
+
+  // Fallback
+  return { pretty: String(value), address: '' };
+}
+
 export const indexEmail = async (email: any, { useId = true } = {}): Promise<boolean> => {
   try {
-    if (!email.subject && !email.body) {
+    if (!email.subject && !email.body && !email.text && !email.html) {
       console.warn('[es] skipping empty email');
       return false;
     }
@@ -107,9 +153,15 @@ export const indexEmail = async (email: any, { useId = true } = {}): Promise<boo
     const midRaw = (email.messageId || '').toString();
     const messageIdClean = midRaw.replace(/[<>]/g, '');
 
+    // Normalize from/to into plain strings + raw addresses
+    const fromInfo = formatEmailAddressField(email.from);
+    const toInfo = formatEmailAddressField(email.to);
+
     const doc = {
-      from: email.from || '',
-      to: email.to || '',
+      from: fromInfo.pretty || '',
+      from_address: fromInfo.address || '',
+      to: toInfo.pretty || '',
+      to_address: toInfo.address || '',
       subject: email.subject || '',
       body: email.text || email.body || '',
       bodyHtml: email.html || email.bodyHtml || '',
@@ -125,7 +177,6 @@ export const indexEmail = async (email: any, { useId = true } = {}): Promise<boo
     const id = useId ? makeEsId(email) : undefined;
     console.log('[es] indexing', { index: ES_INDEX, id: id ? id : '(auto-generated)', subject: (doc.subject || '').slice(0, 120) });
 
-    // <-- use `body` here (not `document`)
     const resp = await esClient.index({
       index: ES_INDEX,
       ...(id ? { id } : {}),
