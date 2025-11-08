@@ -10,7 +10,7 @@
     "postinstall": "npm run build"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^7.17.0",
