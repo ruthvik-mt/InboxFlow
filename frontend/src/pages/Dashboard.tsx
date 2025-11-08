@@ -19,7 +19,7 @@ function Dashboard() {
   const [isOnline, setIsOnline] = useState(true);
 
   // Filter states
-  const [_searchQuery, setSearchQuery] = useState(''); // renamed to suppress unused-var lint
+  const [, setSearchQuery] = useState('');
   const [selectedAccount, setSelectedAccount] = useState('');
   const [selectedFolder, setSelectedFolder] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');

@@ -17,7 +17,7 @@ import {
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const [_hoveredFeature, setHoveredFeature] = useState<number | null>(null);
+  const [, setHoveredFeature] = useState<number | null>(null);
 
   const features = [
     {
