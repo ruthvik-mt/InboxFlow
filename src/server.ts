@@ -296,7 +296,7 @@ app.get('/routes', (_req: Request, res: Response) => {
 const PORT = Number(process.env.PORT || 5000);
 
 app.listen(PORT, () => {
-  console.log(`\n🚀 Server running on port ${PORT}\n`);
+  console.log(`\nServer running on port ${PORT}\n`);
 });
 
 export default app;
