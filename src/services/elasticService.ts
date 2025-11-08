@@ -143,9 +143,9 @@ export const indexEmail = async (email: any): Promise<boolean> => {
     const docId = makeEsId(email);
 
     const response = await esClient.index({
-      index: ELASTICSEARCH_INDEX,
-      id: docId,
-      document,
+    index: ELASTICSEARCH_INDEX,
+    id: docId,
+    body: document, 
     });
   
     const result = (response as any).result || ((response as any).body && (response as any).body.result);
