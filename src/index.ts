@@ -27,47 +27,12 @@ const accounts = [
   },
 ];
 
-// Env Var
-const requiredEnvVars = ["CEREBRAS_API_KEY", "SLACK_TOKEN", "SLACK_CHANNEL"];
-const missingVars = requiredEnvVars.filter((v) => !process.env[v]);
-if (missingVars.length > 0) {
-  console.warn("Missing environment variables (service will still start):");
-  missingVars.forEach((v) => console.warn(`   - ${v}`));
-  console.warn(
-    "Set them in Render Dashboard → Environment if you want full functionality."
-  );
-} else {
-  console.log("All required environment variables are present.");
-}
-
-console.log("ENV SUMMARY:", {
-  NODE_ENV: process.env.NODE_ENV || "undefined",
-  PORT: process.env.PORT || "undefined",
-  ELASTICSEARCH_URL: process.env.ELASTICSEARCH_URL ? "[present]" : "[missing]",
-  ELASTICSEARCH_APIKEY: process.env.ELASTICSEARCH_APIKEY
-    ? "[present]"
-    : "[missing]",
-  CEREBRAS_API_KEY: process.env.CEREBRAS_API_KEY ? "[present]" : "[missing]",
-  SLACK_TOKEN: process.env.SLACK_TOKEN ? "[present]" : "[missing]",
-});
-
 // ---------- Express setup ----------
 const app = express();
-const allowedOrigins = (
-  process.env.ALLOWED_ORIGINS ||
-  "http://localhost:3000,https://reachinbox-onebox.vercel.app,https://reachinbox-onebox-ai-z353.onrender.com"
-)
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-console.log("Allowed CORS origins:", allowedOrigins);
-
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
       if (/^https?:\/\/(.+\.)?vercel\.app$/.test(origin)) return callback(null, true);
       if (/^https?:\/\/(.+\.)?onrender\.com$/.test(origin)) return callback(null, true);
       console.warn("Blocked CORS origin:", origin);
@@ -199,8 +164,7 @@ app.get("/stats", async (_req: Request, res: Response) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`\n✅ Server running on port ${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health\n`);
+  console.log(`\nServer running on port ${PORT}\n`);
 });
 
 // Shutdown handlers

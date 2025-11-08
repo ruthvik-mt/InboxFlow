@@ -1,3 +1,4 @@
+// src/services/aiService.ts
 import "dotenv/config";
 import axios from "axios";
 
@@ -16,15 +17,16 @@ export interface ClassifyResult {
 
 const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY || "";
 const CEREBRAS_URL = process.env.CEREBRAS_URL || "https://api.cerebras.ai/v1/chat/completions";
-const CEREBRAS_MODEL = process.env.CEREBRAS_MODEL || "gpt-oss-120b";
+const CEREBRAS_MODEL = process.env.CEREBRAS_MODEL || "llama3.1-8b";
 
-const RPS = Number(process.env.CEREBRAS_RPS || "0.2");
+// Rate limiting
+const RPS = Number(process.env.CEREBRAS_RPS || "0.5");
 const MAX_CONCURRENCY = Number(process.env.CEREBRAS_CONCURRENCY || "1");
-const MAX_RETRIES = Number(process.env.CEREBRAS_MAX_RETRIES || "3");
-const BASE_BACKOFF_MS = Number(process.env.CEREBRAS_BACKOFF_MS || "5000");
-const JITTER_MS = Number(process.env.CEREBRAS_JITTER_MS || "2000");
+const MAX_RETRIES = Number(process.env.CEREBRAS_MAX_RETRIES || "5");
+const BASE_BACKOFF_MS = Number(process.env.CEREBRAS_BACKOFF_MS || "3000");
+const JITTER_MS = Number(process.env.CEREBRAS_JITTER_MS || "1000");
 const REQUEST_TIMEOUT_MS = Number(process.env.CEREBRAS_TIMEOUT_MS || "30000");
-const MAX_EMAIL_CHARS = Number(process.env.CEREBRAS_MAX_EMAIL_CHARS || "4000");
+const MAX_EMAIL_CHARS = Number(process.env.CEREBRAS_MAX_EMAIL_CHARS || "6000");
 
 if (!CEREBRAS_API_KEY) {
   console.warn("CEREBRAS_API_KEY not set. Set it in your .env to enable classification.");
@@ -52,25 +54,28 @@ export async function categorizeEmailRaw(subject: string, body: string): Promise
   if (!CEREBRAS_API_KEY) {
     throw new Error("Missing CEREBRAS_API_KEY");
   }
-
-  const MAX_CHARS = MAX_EMAIL_CHARS || 4000;
+  
+  const MAX_CHARS = MAX_EMAIL_CHARS || 6000;
   const truncatedSubject = (subject ?? "").slice(0, 500);
   const truncatedBody = (body ?? "").slice(0, MAX_CHARS);
   const wasTruncated = (body?.length || 0) > MAX_CHARS;
 
   const text = `${truncatedSubject}\n\n${truncatedBody}`.trim();
 
+  // Prompt
   const prompt = `
 You are an email classification assistant. Classify the email into exactly one of the following categories:
 ${CANDIDATE_LABELS.join(", ")}.
 
-Rules:
-1) Return JSON ONLY with keys: label, confidence, explanation.
-2) If the email contains unsubscribe, marketing, promotion links -> use "Not Interested".
-3) If the email asks to book or confirm a meeting -> use "Meeting Booked".
-4) If the email mentions vacation, out of office -> use "Out of Office".
-5) If spam -> use "Spam".
-6) Otherwise use "Interested" or "Not Interested".
+Rules (follow exactly):
+1) Return JSON ONLY with keys: label (one of the categories), confidence (0.0-1.0), explanation (short).
+   Example: {"label":"Interested","confidence":0.95,"explanation":"..."}.
+2) Explanation must be a short sentence supporting the label.
+3) If the email contains explicit unsubscribe, marketing, promotion links, or clear bulk-marketing signals -> prefer "Not Interested" (use "Spam" only if the email clearly looks like spam).
+4) If the email asks to book or confirm a meeting/time -> use "Meeting Booked".
+5) If the email mentions vacation, out of office, or OOO -> use "Out of Office".
+6) Confidence should reflect certainty: 0.0 (no idea) .. 1.0 (very sure).
+7) Ensure the label is consistent with the explanation. If they conflict, adjust the label to match the explanation.
 
 Email${wasTruncated ? ' (truncated)' : ''}:
 """${text}"""
@@ -98,15 +103,19 @@ Email${wasTruncated ? ' (truncated)' : ''}:
 
   const content = resp.data?.choices?.[0]?.message?.content ?? String(resp.data ?? "");
 
+  // Robust parse + heuristic
   try {
     const parsed = JSON.parse(content);
+
     const labelRaw = String(parsed.label ?? "");
     const explanationRaw = String(parsed.explanation ?? "");
     const confidenceRaw = Number(parsed.confidence);
     const confidenceCandidate = Number.isFinite(confidenceRaw) ? Math.max(0, Math.min(1, confidenceRaw)) : undefined;
 
+    
     let label = normalizeLabel(labelRaw || explanationRaw || content);
 
+   
     const explanationLower = explanationRaw.toLowerCase();
     const contentLower = text.toLowerCase();
 
@@ -116,6 +125,7 @@ Email${wasTruncated ? ' (truncated)' : ''}:
     const hasOOO = /\bout of office\b|\bout-of-office\b|\boof\b|\bvacation\b/.test(explanationLower) || /\bout of office\b|\bout-of-office\b|\boof\b|\bvacation\b/.test(contentLower);
     const hasMeeting = /\b(schedule|book|meeting|interview|call|availability|when will)\b/.test(explanationLower) || /\b(schedule|book|meeting|interview|call|availability|when will)\b/.test(contentLower);
 
+   
     if (hasSpam) {
       label = "Spam";
     } else if (hasUnsubscribe || hasPromo) {
@@ -134,11 +144,12 @@ Email${wasTruncated ? ' (truncated)' : ''}:
 
     return { label: label as Label, confidence: Math.max(0, Math.min(1, confidence)), explanation: explanationRaw || content };
   } catch {
+    
     const match = content.match(/\b(Interested|Meeting Booked|Not Interested|Spam|Out of Office)\b/i);
     let label = normalizeLabel(match ? match[0] : content);
     const confMatch = content.match(/([01](?:\.\d+)?|\d?\.\d+)/);
     const confidence = confMatch ? Math.max(0, Math.min(1, Number(confMatch[0]))) : 1;
-
+ 
     const contentLower = text.toLowerCase();
     if (/\bunsubscribe\b/.test(contentLower) || /\bpromo\b|\bpromotion\b|\bmarketing\b/.test(contentLower)) {
       label = "Not Interested";
@@ -154,6 +165,7 @@ Email${wasTruncated ? ' (truncated)' : ''}:
   }
 }
 
+// Queue for rate limiting
 type QueueItem = {
   subject: string;
   body: string;
@@ -192,15 +204,17 @@ async function processOne(item: QueueItem): Promise<ClassifyResult> {
       const isRate =
         status === 429 ||
         /too[_\s-]*many[_\s-]*requests|request_quota_exceeded|quota|rate limit/i.test(bodyMsg);
-
+      
       const isContextError =
         status === 400 &&
         /context_length_exceeded|reduce the length/i.test(bodyMsg);
 
       if (isContextError) {
         console.error(
-          `[Cerebras] Context length exceeded for: ${item.subject.substring(0, 50)}...`
+          `[Cerebras] Context length exceeded for: ${item.subject.substring(0, 50)}... ` +
+          `(this email is too long, even after truncation)`
         );
+        
         return {
           label: "Not Interested",
           confidence: 0.5,

@@ -30,15 +30,15 @@ async function waitForElasticsearch(retries = MAX_RETRIES): Promise<boolean> {
   for (let i = 0; i < retries; i++) {
     try {
       await esClient.ping();
-      console.log(`[es] connected -> ${ES_URL}`);
+      console.log(`[Elastic] connected -> ${ES_URL}`);
       return true;
     } catch (err: any) {
       const attemptsLeft = retries - i - 1;
-      console.warn(`[es] ping failed (attempt ${i + 1}/${retries}): ${err?.message || err}`);
+      console.warn(`[Elastic] ping failed (attempt ${i + 1}/${retries}): ${err?.message || err}`);
       if (attemptsLeft > 0) {
         await sleep(RETRY_DELAY_MS);
       } else {
-        console.error('[es] connection failed after retries; check ELASTICSEARCH_URL and credentials');
+        console.error('[Elastic] connection failed after retries; check ELASTICSEARCH_URL and credentials');
         return false;
       }
     }
@@ -54,7 +54,7 @@ async function initializeElasticsearch() {
     const existsResp = await esClient.indices.exists({ index: ES_INDEX });
     const exists = typeof existsResp === 'boolean' ? existsResp : (existsResp as any).body;
     if (!exists) {
-      console.log('[es] creating index:', ES_INDEX);
+      console.log('[Elastic] creating index:', ES_INDEX);
       await esClient.indices.create({
         index: ES_INDEX,
         body: {
@@ -78,12 +78,12 @@ async function initializeElasticsearch() {
           }
         }
       });
-      console.log('[es] index created:', ES_INDEX);
+      console.log('[Elastic] index created:', ES_INDEX);
     } else {
-      console.log('[es] index already exists:', ES_INDEX);
+      console.log('[Elastic] index already exists:', ES_INDEX);
     }
   } catch (err: any) {
-    console.error('[es] initialize error:', err?.message || err, err?.meta?.body ?? '');
+    console.error('[Elastic] initialize error:', err?.message || err, err?.meta?.body ?? '');
   }
 }
 initializeElasticsearch();
@@ -139,7 +139,7 @@ function formatEmailAddressField(value: any): { pretty: string; address: string 
 export const indexEmail = async (email: any, { useId = true } = {}): Promise<boolean> => {
   try {
     if (!email.subject && !email.body && !email.text && !email.html) {
-      console.warn('[es] skipping empty email');
+      console.warn('[Elastic] skipping empty email');
       return false;
     }
 
@@ -168,7 +168,7 @@ export const indexEmail = async (email: any, { useId = true } = {}): Promise<boo
     };
 
     const id = useId ? makeEsId(email) : undefined;
-    console.log('[es] indexing', { index: ES_INDEX, id: id ? id : '(auto-generated)', subject: (doc.subject || '').slice(0, 120) });
+    console.log('[Elastic] indexing', { index: ES_INDEX, id: id ? id : '(auto-generated)', subject: (doc.subject || '').slice(0, 120) });
 
     const resp = await esClient.index({
       index: ES_INDEX,
@@ -178,15 +178,15 @@ export const indexEmail = async (email: any, { useId = true } = {}): Promise<boo
     });
 
     const body = (resp as any).body || resp;
-    console.log('[es] index response:', JSON.stringify(body));
+    console.log('[Elastic] index response:', JSON.stringify(body));
     return true;
   } catch (err: any) {
-    console.error('[es] indexing error (full):', err);
+    console.error('[Elastic] indexing error (full):', err);
     if (err?.meta?.body) {
-      console.error('[es] meta.body:', JSON.stringify(err.meta.body));
+      console.error('[Elastic] meta.body:', JSON.stringify(err.meta.body));
     }
     if (err?.meta?.statusCode === 409) {
-      console.log('[es] duplicate (409) -> ok');
+      console.log('[Elastic] duplicate (409) -> ok');
       return true;
     }
     throw err;
@@ -197,7 +197,7 @@ export const searchEmails = async (query: any, options: any = {}) => {
   try {
     return await esClient.search({ index: ES_INDEX, ...options, body: query });
   } catch (err: any) {
-    console.error('[es] search error:', err?.message || err);
+    console.error('[Elastic] search error:', err?.message || err);
     throw err;
   }
 };
