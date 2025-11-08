@@ -160,17 +160,32 @@ const accounts = [
 
 // Validate configuration
 const requiredEnvVars = [
+  // If these are truly required for your app to function, ensure you set them
+  // in Render dashboard. For now we WARN instead of exiting to avoid crash loops.
   'CEREBRAS_API_KEY',
   'SLACK_TOKEN',
   'SLACK_CHANNEL',
 ];
 
 const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+
 if (missingVars.length > 0) {
-  console.error("Missing required environment variables:");
-  missingVars.forEach(v => console.error(`   - ${v}`));
-  process.exit(1);
+  console.warn('Warning: Missing some environment variables (service will still start).');
+  missingVars.forEach(v => console.warn(`   - ${v}`));
+  console.warn('Set them in Render Dashboard -> Service -> Environment to enable full functionality.');
+} else {
+  console.log('All required environment variables are present.');
 }
+
+// Print a short env summary (no secrets)
+console.log('ENV SUMMARY:', {
+  NODE_ENV: process.env.NODE_ENV || 'undefined',
+  PORT: process.env.PORT || 'undefined',
+  ELASTICSEARCH_URL: process.env.ELASTICSEARCH_URL ? '[present]' : '[missing]',
+  ELASTICSEARCH_APIKEY: process.env.ELASTICSEARCH_APIKEY ? '[present]' : '[missing]',
+  CEREBRAS_API_KEY: process.env.CEREBRAS_API_KEY ? '[present]' : '[missing]',
+  SLACK_TOKEN: process.env.SLACK_TOKEN ? '[present]' : '[missing]',
+});
 
 // Express app
 const app = express();
