@@ -78,7 +78,6 @@ const LandingPage: React.FC = () => {
               />
               <div>
                 <span className="text-2xl font-bold">OneBox</span>
-                <p className="text-xs text-gray-400">Email Management</p>
               </div>
             </div>
 
