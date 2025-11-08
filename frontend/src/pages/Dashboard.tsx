@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Inbox, AlertCircle, Wifi, WifiOff, ArrowLeft } from 'lucide-react';
+import { AlertCircle, Wifi, WifiOff, ArrowLeft } from 'lucide-react';
 import EmailList from '../components/EmailList';
 import EmailDetail from '../components/EmailDetail';
 import SearchBar from '../components/SearchBar';
@@ -19,7 +19,7 @@ function Dashboard() {
   const [isOnline, setIsOnline] = useState(true);
 
   // Filter states
-  const [searchQuery, setSearchQuery] = useState('');
+  const [_searchQuery, setSearchQuery] = useState(''); // renamed to suppress unused-var lint
   const [selectedAccount, setSelectedAccount] = useState('');
   const [selectedFolder, setSelectedFolder] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
