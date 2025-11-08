@@ -177,8 +177,8 @@ const app = express();
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    /\.vercel\.app$/,
-    /\.onrender\.com$/
+    'https://reachinbox-oneboxai.vercel.app/',
+    /\.vercel\.app$/
   ],
   credentials: true
 }));
