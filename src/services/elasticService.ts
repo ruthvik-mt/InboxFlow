@@ -2,16 +2,28 @@
 import { Client } from '@elastic/elasticsearch';
 import 'dotenv/config';
 
-const ELASTICSEARCH_NODE = process.env.ELASTICSEARCH_NODE || 'http://localhost:9200';
+const ELASTICSEARCH_URL = process.env.ELASTICSEARCH_URL || process.env.ELASTICSEARCH_NODE || 'http://localhost:9200';
 const ELASTICSEARCH_INDEX = process.env.ELASTICSEARCH_INDEX || 'emails';
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 3000;
 
-export const esClient = new Client({
-  node: ELASTICSEARCH_NODE,
+const clientConfig: any = {
+  node: ELASTICSEARCH_URL,
   maxRetries: 3,
   requestTimeout: 30000,
-});
+};
+
+// prefer API key if provided (encoded form from Elastic Cloud)
+if (process.env.ELASTICSEARCH_APIKEY) {
+  clientConfig.auth = { apiKey: process.env.ELASTICSEARCH_APIKEY };
+} else if (process.env.ELASTICSEARCH_USERNAME || process.env.ELASTICSEARCH_PASSWORD) {
+  clientConfig.auth = {
+    username: process.env.ELASTICSEARCH_USERNAME || '',
+    password: process.env.ELASTICSEARCH_PASSWORD || '',
+  };
+}
+
+export const esClient = new Client(clientConfig);
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -21,7 +33,7 @@ async function waitForElasticsearch(retries = MAX_RETRIES): Promise<boolean> {
   for (let i = 0; i < retries; i++) {
     try {
       await esClient.ping();
-      console.log(`Elasticsearch connected: ${ELASTICSEARCH_NODE}\n`);
+      console.log(`Elasticsearch connected: ${ELASTICSEARCH_URL}\n`);
       return true;
     } catch (error: any) {
       const attemptsLeft = retries - i - 1;
@@ -33,7 +45,7 @@ async function waitForElasticsearch(retries = MAX_RETRIES): Promise<boolean> {
         await sleep(RETRY_DELAY_MS);
       } else {
         console.error('Elasticsearch connection failed after all retries');
-        console.error('Make sure Elasticsearch is running at:', ELASTICSEARCH_NODE);
+        console.error('Make sure Elasticsearch is running at:', ELASTICSEARCH_URL);
         console.error('Run: docker-compose up -d');
         return false;
       }
