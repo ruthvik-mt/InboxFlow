@@ -17,7 +17,7 @@ export interface ClassifyResult {
 
 const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY || "";
 const CEREBRAS_URL = process.env.CEREBRAS_URL || "https://api.cerebras.ai/v1/chat/completions";
-const CEREBRAS_MODEL = process.env.CEREBRAS_MODEL || "llama3.1-8b";
+const CEREBRAS_MODEL = process.env.CEREBRAS_MODEL || "llama-3.3-70b";
 
 // Rate limiting
 const RPS = Number(process.env.CEREBRAS_RPS || "0.5");
