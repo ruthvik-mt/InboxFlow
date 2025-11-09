@@ -1,5 +1,5 @@
 import express, { Response } from 'express';
-import { esClient, fetchEmailByAnyId, searchEmails } from '../services/elasticService';
+import { esClient, fetchEmailByAnyId } from '../services/elasticService';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { getDB } from '../config/database';
 import { ObjectId } from 'mongodb';
@@ -19,10 +19,14 @@ async function getUserAccountEmails(userId: string): Promise<string[]> {
     const db = await getDB();
     const userAccounts = await db
       .collection('emailAccounts')
-      .find({ userId: new ObjectId(userId) })
+      .find({ 
+        userId: new ObjectId(userId),
+        isActive: true
+      })
       .project({ email: 1 })
       .toArray();
     
+    console.log(`[Email Filter] User ${userId} has ${userAccounts.length} active accounts`);
     return userAccounts.map(acc => acc.email);
   } catch (err) {
     console.error('Error fetching user accounts:', err);
@@ -39,10 +43,12 @@ router.get('/search', async (req: AuthRequest, res: Response) => {
   const label = req.query.label as string | undefined;
 
   try {
-    // Get user's account emails for filtering
     const userAccountEmails = await getUserAccountEmails(req.userId!);
     
+    console.log(`[Search] User accounts:`, userAccountEmails);
+    
     if (userAccountEmails.length === 0) {
+      console.log('[Search] No active accounts found for user');
       return res.json({ meta: { total: 0, size: 0 }, emails: [] });
     }
 
@@ -53,7 +59,6 @@ router.get('/search', async (req: AuthRequest, res: Response) => {
         if (payload?.found) {
           const source = payload._source as Record<string, any>;
           
-          // Check if email belongs to user
           if (!userAccountEmails.includes(source.accountEmail)) {
             return res.status(403).json({ error: 'Access denied' });
           }
@@ -71,28 +76,36 @@ router.get('/search', async (req: AuthRequest, res: Response) => {
     const must: any[] = [];
     const filter: any[] = [];
     
-    // Filter by user's accounts
-    filter.push({ terms: { 'accountEmail.keyword': userAccountEmails } });
+    // ✅ FIX: accountEmail is already a keyword field, no .keyword needed
+    filter.push({ terms: { accountEmail: userAccountEmails } });
     
     if (q) {
       must.push({
         multi_match: {
           query: q,
-          fields: ['subject', 'body', 'from.address', 'to.address'],
+          fields: ['subject', 'body', 'from', 'to'],
           fuzziness: 'AUTO',
         },
       });
     }
-    if (account) filter.push({ term: { 'account.keyword': account } });
-    if (folder) filter.push({ term: { 'folder.keyword': folder } });
-    if (label) filter.push({ term: { 'category.keyword': label } });
+    if (account) {
+      filter.push({ term: { accountEmail: account } });
+    }
+    if (folder) {
+      filter.push({ term: { folder: folder } });
+    }
+    if (label) {
+      filter.push({ term: { category: label } });
+    }
 
     const query = { bool: { ...(must.length ? { must } : {}), filter } };
+
+    console.log('[Search] Query:', JSON.stringify(query, null, 2));
 
     const esResp = await esClient.search({ 
       index: 'emails', 
       body: { 
-        size: 50, 
+        size: 100, 
         sort: [{ date: { order: 'desc' } }], 
         query 
       } 
@@ -102,20 +115,24 @@ router.get('/search', async (req: AuthRequest, res: Response) => {
     const hits = (body?.hits?.hits || []).map((hit: any) => ({ _id: hit._id, ...hit._source }));
     const total = body?.hits?.total?.value ?? body?.hits?.total ?? hits.length;
 
+    console.log(`[Search] Found ${hits.length} emails (total: ${total})`);
+
     return res.json({ meta: { total, size: hits.length }, emails: hits });
   } catch (err: any) {
     console.error('>>> Elasticsearch /emails/search error:', err?.meta?.body?.error ?? err?.message ?? err);
-    return res.status(500).send('Error searching emails');
+    return res.status(500).json({ error: 'Error searching emails' });
   }
 });
 
 // Emails list
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    // Get user's account emails for filtering
     const userAccountEmails = await getUserAccountEmails(req.userId!);
     
+    console.log(`[List] User accounts:`, userAccountEmails);
+    
     if (userAccountEmails.length === 0) {
+      console.log('[List] No active accounts found for user');
       return res.json({ meta: { total: 0, page: 1, size: 0 }, emails: [] });
     }
 
@@ -126,7 +143,6 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       const email = await fetchEmailByAnyId(idParam, accountHint);
       if (!email) return res.status(404).json({ error: 'Email not found' });
       
-      // Check if email belongs to user
       if (!userAccountEmails.includes(email.accountEmail)) {
         return res.status(403).json({ error: 'Access denied' });
       }
@@ -135,10 +151,11 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     }
 
     const days = parseInt((req.query.days as string) || '30', 10);
-    const size = Math.min(parseInt((req.query.size as string) || '50', 10), 1000);
+    const size = Math.min(parseInt((req.query.size as string) || '200', 10), 1000);
     const page = Math.max(parseInt((req.query.page as string) || '1', 10), 1);
     const from = (page - 1) * size;
 
+    // ✅ FIX: accountEmail is already a keyword field, no .keyword needed
     const esResp = await esClient.search({
       index: 'emails',
       body: {
@@ -148,7 +165,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         query: {
           bool: {
             filter: [
-              { terms: { 'accountEmail.keyword': userAccountEmails } },
+              { terms: { accountEmail: userAccountEmails } },
               {
                 range: {
                   date: { gte: `now-${days}d/d`, lte: 'now' },
@@ -167,6 +184,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     for (const h of hits) unique.set(h._id, h);
     const emails = Array.from(unique.values());
 
+    console.log(`[List] Found ${emails.length} emails for user (total: ${total})`);
+
     return res.json({ meta: { total, page, size }, emails });
   } catch (err: any) {
     console.error('GET /emails error', err?.message ?? err);
@@ -180,7 +199,6 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     const rawId = (req.params.id || '').toString();
     if (!rawId) return res.status(400).json({ error: 'id required' });
 
-    // Get user's account emails for filtering
     const userAccountEmails = await getUserAccountEmails(req.userId!);
     
     if (userAccountEmails.length === 0) {
@@ -192,7 +210,6 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     
     if (!email) return res.status(404).json({ error: 'Email not found' });
     
-    // Check if email belongs to user
     if (!userAccountEmails.includes(email.accountEmail)) {
       return res.status(403).json({ error: 'Access denied' });
     }

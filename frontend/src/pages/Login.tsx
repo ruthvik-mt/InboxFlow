@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
@@ -29,12 +29,23 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
       <div className="max-w-md w-full">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Home</span>
+        </button>
+
+        {/* Header */}
         <div className="text-center mb-8">
           <img src="/OneMail.png" alt="Logo" className="w-16 h-16 mx-auto mb-4" />
           <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
           <p className="text-gray-400">Sign in to your OneBox account</p>
         </div>
 
+        {/* Login Form */}
         <div className="bg-gray-900 rounded-lg border border-gray-800 p-8">
           {error && (
             <div className="bg-red-900/30 border border-red-700 text-red-400 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">

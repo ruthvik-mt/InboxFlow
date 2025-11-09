@@ -5,20 +5,60 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 
 export interface AuthRequest extends Request {
   userId?: string;
+  userEmail?: string;
 }
 
-export function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
-  const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
+export interface JWTPayload {
+  userId: string;
+  email: string;
+  iat?: number;
+  exp?: number;
+}
 
-  if (!token) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-
+export const authenticateToken = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    // Check for token in multiple places
+    let token: string | undefined;
+
+    // 1. Check Authorization header (Bearer token)
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+      console.log('[Auth Middleware] Token found in Authorization header');
+    }
+
+    // 2. Check cookie
+    if (!token && req.cookies?.token) {
+      token = req.cookies.token;
+      console.log('[Auth Middleware] Token found in cookie');
+    }
+
+    // 3. No token found
+    if (!token) {
+      console.log('[Auth Middleware] No token found');
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    
     req.userId = decoded.userId;
+    req.userEmail = decoded.email;
+
+    console.log('[Auth Middleware] Token verified for user:', decoded.email);
+
     next();
-  } catch (err) {
-    return res.status(403).json({ error: 'Invalid or expired token' });
+  } catch (err: any) {
+    console.error('[Auth Middleware] Token verification failed:', err.message);
+    
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired' });
+    }
+    
+    return res.status(403).json({ error: 'Invalid token' });
   }
-}
+};
