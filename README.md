@@ -489,5 +489,10 @@ onebox-email-aggregator/
    
 ---
 
+<div align="center">
+
 *Built with ❤️ using React, Node.js, TypeScript & AI*  
 *November 2025*
+
+</div>
+
