@@ -71,7 +71,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     checkAuth();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // We only want this to run once on mount
 
   // Debug logs when user or loading changes
   useEffect(() => {
