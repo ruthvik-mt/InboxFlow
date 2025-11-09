@@ -1,4 +1,4 @@
-# 📧 OneBox - AI-Powered Email Aggregator
+# OneBox - AI-Powered Email Aggregator
 
 A feature-rich onebox email aggregator with real-time IMAP synchronization, AI categorization and advanced search capabilities.
 
