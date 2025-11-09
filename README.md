@@ -1,13 +1,12 @@
 # 📧 OneBox - AI-Powered Email Aggregator
 
-> **ReachInbox Backend Engineer Assignment**  
-> A feature-rich onebox email aggregator with real-time IMAP synchronization, AI categorization, and advanced search capabilities.
+A feature-rich onebox email aggregator with real-time IMAP synchronization, AI categorization and advanced search capabilities.
 
 ---
 
 ## Project Overview
 
-OneBox is a modern email management platform that aggregates multiple email accounts into a single intelligent inbox. Built with React, Node.js, Elasticsearch, and AI, it provides real-time synchronization, smart categorization, and powerful search capabilities.
+OneBox is a modern email management platform that aggregates multiple email accounts into a single intelligent inbox. Built with React, Node.js, Elasticsearch and AI, it provides real-time synchronization, smart categorization and powerful search capabilities.
 
 ### Key Features
 
