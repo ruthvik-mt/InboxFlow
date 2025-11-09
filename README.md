@@ -8,14 +8,16 @@ A feature-rich onebox email aggregator with real-time IMAP synchronization, AI c
 
 OneBox is a modern email management platform that aggregates multiple email accounts into a single intelligent inbox. Built with React, Node.js, Elasticsearch and AI, it provides real-time synchronization, smart categorization and powerful search capabilities.
 
+---
+
 ### Key Features
 
-- **Real-Time IMAP Synchronization** - Connect multiple email accounts with instant updates
-- **Elasticsearch-Powered Search** - Find any email in milliseconds
-- **AI Email Categorization** - Automatic classification into 5 categories
-- **Smart Notifications** - Slack alerts and webhook triggers for important emails
-- **Modern UI** - Clean, responsive interface with dark mode
-- **Secure Authentication** - JWT-based auth with encrypted email passwords
+- **Real-Time IMAP Synchronization** - Connect multiple email accounts with instant updates  
+- **Elasticsearch-Powered Search** - Find any email in milliseconds  
+- **AI Email Categorization** - Automatic classification into 5 categories  
+- **Smart Notifications** - Slack alerts and webhook triggers for important emails  
+- **Modern UI** - Clean, responsive interface with dark mode  
+- **Secure Authentication** - JWT-based auth with encrypted email passwords  
 ---
 
 ## Architecture
