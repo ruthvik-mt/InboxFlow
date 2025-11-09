@@ -22,7 +22,7 @@ OneBox is a modern email management platform that aggregates multiple email acco
 
 ## Architecture
 <p align="center">
-  <img src="./assets/onebox-architecture.png" alt="OneBox Architecture" width="800">
+  <img src="./public/onebox-architecture.png" alt="OneBox Architecture" width="800">
 </p>
 
 ---
