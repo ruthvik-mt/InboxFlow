@@ -37,7 +37,7 @@ OneBox is a modern email management platform that aggregates multiple email acco
     │          │          │          │
 ┌───┴───┐  ┌───┴───┐  ┌───┴───┐  ┌───┴────┐
 │MongoDB│  │Elastic│  │Cerebras│ │  Slack │
-│       │  │search │  │  API   │ │Webhooks│
+│       │  │search │  │   AI   │ │Webhooks│
 └───────┘  └───────┘  └────────┘ └────────┘
 ```
 
