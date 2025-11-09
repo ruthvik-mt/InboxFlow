@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, Wifi, WifiOff, ArrowLeft } from 'lucide-react';
+import { AlertCircle, Wifi, WifiOff, Settings, LogOut, X } from 'lucide-react';
 import EmailList from '../components/EmailList';
 import EmailDetail from '../components/EmailDetail';
 import SearchBar from '../components/SearchBar';
 import StatsCards from '../components/StatsCards';
+import AccountManager from '../components/AccountManager';
+import { useAuth } from '../contexts/AuthContext';
 import { emailAPI } from '../services/api';
 import { Email, StatsResponse } from '../types';
 
 function Dashboard() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [emails, setEmails] = useState<Email[]>([]);
   const [filteredEmails, setFilteredEmails] = useState<Email[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
@@ -17,6 +20,7 @@ function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [isOnline, setIsOnline] = useState(true);
+  const [showAccountManager, setShowAccountManager] = useState(false);
 
   // Filter states
   const [, setSearchQuery] = useState('');
@@ -139,6 +143,15 @@ function Dashboard() {
     fetchStats();
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
@@ -147,26 +160,40 @@ function Dashboard() {
           {/* Title Section */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate('/')}
-                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-                title="Back to Home"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-400" />
-              </button>
-                <img
+              <img
                 src="/OneMail.png"
                 alt="Logo"
                 className="w-10 h-10"
-                />
+              />
               <div>
                 <h1 className="text-2xl font-bold text-white">OneBox Dashboard</h1>
-                <p className="text-sm text-gray-400">Email Management Console</p>
+                <p className="text-sm text-gray-400">
+                  {user?.name ? `Welcome, ${user.name}` : 'Email Management Console'}
+                </p>
               </div>
             </div>
 
-            {/* Status Indicators */}
+            {/* Status Indicators & Actions */}
             <div className="flex items-center gap-4">
+              {/* Settings Button */}
+              <button
+                onClick={() => setShowAccountManager(true)}
+                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                title="Manage Email Accounts"
+              >
+                <Settings className="w-5 h-5 text-gray-400 hover:text-white" />
+              </button>
+
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                title="Logout"
+              >
+                <LogOut className="w-5 h-5 text-gray-400 hover:text-white" />
+              </button>
+
+              {/* Online Status */}
               <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
                 isOnline ? 'bg-green-900/30 text-green-400 border border-green-700' : 'bg-red-900/30 text-red-400 border border-red-700'
               }`}>
@@ -184,11 +211,11 @@ function Dashboard() {
               </div>
 
               {/* Queue Stats */}
-              {stats && (
+              {stats?.ai && (
                 <div className="bg-gray-800 border border-gray-700 px-3 py-1.5 rounded-lg">
                   <span className="text-sm text-gray-300">
                     <span className="font-medium">AI Queue:</span>{' '}
-                    {stats.cerebras?.queueLength || 0}
+                    {stats.ai.queueLength || stats.cerebras?.queueLength || 0}
                   </span>
                 </div>
               )}
@@ -247,6 +274,26 @@ function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* Account Manager Modal */}
+      {showAccountManager && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-900 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-800 flex items-center justify-between sticky top-0 bg-gray-900 z-10">
+              <h2 className="text-2xl font-bold">Manage Email Accounts</h2>
+              <button
+                onClick={() => setShowAccountManager(false)}
+                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <AccountManager />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

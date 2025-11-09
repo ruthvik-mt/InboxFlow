@@ -1,15 +1,37 @@
-// src/routes/emails.ts
-import express, { Request, Response } from 'express';
+import express, { Response } from 'express';
 import { esClient, fetchEmailByAnyId, searchEmails } from '../services/elasticService';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { getDB } from '../config/database';
+import { ObjectId } from 'mongodb';
 
 const router = express.Router();
+
+// Require authentication for all email routes
+router.use(authenticateToken);
 
 function esPayload(result: any): any {
   return (result && (result.body ?? result)) || null;
 }
 
-// Emails seacrh
-router.get('/search', async (req: Request, res: Response) => {
+// Helper to get user's account emails
+async function getUserAccountEmails(userId: string): Promise<string[]> {
+  try {
+    const db = await getDB();
+    const userAccounts = await db
+      .collection('emailAccounts')
+      .find({ userId: new ObjectId(userId) })
+      .project({ email: 1 })
+      .toArray();
+    
+    return userAccounts.map(acc => acc.email);
+  } catch (err) {
+    console.error('Error fetching user accounts:', err);
+    return [];
+  }
+}
+
+// Emails search
+router.get('/search', async (req: AuthRequest, res: Response) => {
   const q = (req.query.q as string) || '';
   const idParam = (req.query._id || req.query.id || '').toString();
   const account = req.query.account as string | undefined;
@@ -17,12 +39,25 @@ router.get('/search', async (req: Request, res: Response) => {
   const label = req.query.label as string | undefined;
 
   try {
+    // Get user's account emails for filtering
+    const userAccountEmails = await getUserAccountEmails(req.userId!);
+    
+    if (userAccountEmails.length === 0) {
+      return res.json({ meta: { total: 0, size: 0 }, emails: [] });
+    }
+
     if (idParam) {
       try {
         const result = await esClient.get({ index: 'emails', id: idParam });
         const payload = esPayload(result);
         if (payload?.found) {
           const source = payload._source as Record<string, any>;
+          
+          // Check if email belongs to user
+          if (!userAccountEmails.includes(source.accountEmail)) {
+            return res.status(403).json({ error: 'Access denied' });
+          }
+          
           return res.json({ meta: { total: 1, size: 1 }, emails: [{ _id: payload._id, ...source }] });
         }
         return res.status(404).json({ error: 'Email not found' });
@@ -35,6 +70,10 @@ router.get('/search', async (req: Request, res: Response) => {
 
     const must: any[] = [];
     const filter: any[] = [];
+    
+    // Filter by user's accounts
+    filter.push({ terms: { 'accountEmail.keyword': userAccountEmails } });
+    
     if (q) {
       must.push({
         multi_match: {
@@ -48,12 +87,17 @@ router.get('/search', async (req: Request, res: Response) => {
     if (folder) filter.push({ term: { 'folder.keyword': folder } });
     if (label) filter.push({ term: { 'category.keyword': label } });
 
-    const query =
-      must.length === 0 && filter.length === 0
-        ? { match_all: {} }
-        : { bool: { ...(must.length ? { must } : {}), ...(filter.length ? { filter } : {}) } };
+    const query = { bool: { ...(must.length ? { must } : {}), filter } };
 
-    const esResp = await esClient.search({ index: 'emails', body: { size: 50, sort: [{ date: { order: 'desc' } }], query } });
+    const esResp = await esClient.search({ 
+      index: 'emails', 
+      body: { 
+        size: 50, 
+        sort: [{ date: { order: 'desc' } }], 
+        query 
+      } 
+    });
+    
     const body = esPayload(esResp);
     const hits = (body?.hits?.hits || []).map((hit: any) => ({ _id: hit._id, ...hit._source }));
     const total = body?.hits?.total?.value ?? body?.hits?.total ?? hits.length;
@@ -65,14 +109,28 @@ router.get('/search', async (req: Request, res: Response) => {
   }
 });
 
-// Emails  lists
-router.get('/', async (req: Request, res: Response) => {
+// Emails list
+router.get('/', async (req: AuthRequest, res: Response) => {
   try {
+    // Get user's account emails for filtering
+    const userAccountEmails = await getUserAccountEmails(req.userId!);
+    
+    if (userAccountEmails.length === 0) {
+      return res.json({ meta: { total: 0, page: 1, size: 0 }, emails: [] });
+    }
+
     const idParam = (req.query._id || req.query._Id || req.query.id || req.query.ID || '').toString();
     const accountHint = (req.query.accountEmail || req.query.account || '').toString() || undefined;
+    
     if (idParam) {
       const email = await fetchEmailByAnyId(idParam, accountHint);
       if (!email) return res.status(404).json({ error: 'Email not found' });
+      
+      // Check if email belongs to user
+      if (!userAccountEmails.includes(email.accountEmail)) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
       return res.json({ meta: { total: 1, page: 1, size: 1 }, emails: [email] });
     }
 
@@ -89,11 +147,14 @@ router.get('/', async (req: Request, res: Response) => {
         sort: [{ date: { order: 'desc' } }],
         query: {
           bool: {
-            filter: {
-              range: {
-                date: { gte: `now-${days}d/d`, lte: 'now' },
+            filter: [
+              { terms: { 'accountEmail.keyword': userAccountEmails } },
+              {
+                range: {
+                  date: { gte: `now-${days}d/d`, lte: 'now' },
+                },
               },
-            },
+            ],
           },
         },
       },
@@ -114,14 +175,27 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // Email by Id
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const rawId = (req.params.id || '').toString();
     if (!rawId) return res.status(400).json({ error: 'id required' });
 
+    // Get user's account emails for filtering
+    const userAccountEmails = await getUserAccountEmails(req.userId!);
+    
+    if (userAccountEmails.length === 0) {
+      return res.status(403).json({ error: 'No accounts configured' });
+    }
+
     const accountHint = (req.query.accountEmail || req.query.account || '').toString() || undefined;
     const email = await fetchEmailByAnyId(rawId, accountHint);
+    
     if (!email) return res.status(404).json({ error: 'Email not found' });
+    
+    // Check if email belongs to user
+    if (!userAccountEmails.includes(email.accountEmail)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     return res.json({ meta: { total: 1, page: 1, size: 1 }, emails: [email] });
   } catch (err: any) {

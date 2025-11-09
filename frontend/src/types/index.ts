@@ -27,13 +27,33 @@ export interface EmailResponse {
 }
 
 export interface StatsResponse {
-  timestamp: string;
-  cerebras: {
+  ok?: boolean;
+  timestamp?: string;
+  time?: string;
+  es?: {
+    connected: boolean;
+    status?: string;
+    nodeCount?: number;
+  };
+  ai?: {
     queueLength: number;
     running: number;
     dynamicDelayMs: number;
     consecutiveRateLimits: number;
   };
+  cerebras?: {
+    queueLength: number;
+    running: number;
+    dynamicDelayMs: number;
+    consecutiveRateLimits: number;
+  };
+  accounts?: Array<{
+    name: string;
+    user: string;
+    connected: boolean;
+    lastFetch: string | null;
+  }>;
+  imapServiceCount?: number;
 }
 
 export type Category =
