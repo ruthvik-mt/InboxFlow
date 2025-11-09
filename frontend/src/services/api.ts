@@ -8,7 +8,7 @@ console.log('API Base URL:', API_BASE);
 
 const api = axios.create({
   baseURL: API_BASE,
-  timeout: 30000,
+  timeout: 120000, // Increased to 120 seconds for Render cold starts
   headers: {
     'Content-Type': 'application/json'
   },
@@ -22,6 +22,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    console.log('[API Request]', config.method?.toUpperCase(), config.url);
     return config;
   },
   (error) => {
@@ -29,11 +30,32 @@ api.interceptors.request.use(
   }
 );
 
-// Add error interceptor
+// Add response interceptor with better error handling
 api.interceptors.response.use(
-  response => response,
+  response => {
+    console.log('[API Response]', response.status, response.config.url);
+    return response;
+  },
   error => {
-    console.error('API Error:', error.response?.data || error.message);
+    console.error('[API Error]', {
+      url: error.config?.url,
+      status: error.response?.status,
+      message: error.message,
+      data: error.response?.data
+    });
+    
+    // Handle timeout specifically
+    if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+      console.error('[API] Request timed out - backend may be sleeping on Render');
+      error.message = 'Server is starting up, please wait a moment and try again';
+    }
+    
+    // Handle network errors
+    if (error.message === 'Network Error') {
+      console.error('[API] Network error - check if backend is running');
+      error.message = 'Cannot connect to server. Please check your connection.';
+    }
+    
     return Promise.reject(error);
   }
 );

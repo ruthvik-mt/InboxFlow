@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
@@ -17,10 +17,23 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
+      console.log('[Login] Attempting login...');
       await login(email, password);
+      console.log('[Login] Success, redirecting...');
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+      console.error('[Login] Error:', err);
+      
+      // Better error messages
+      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        setError('Server is waking up... Please wait 30 seconds and try again.');
+      } else if (err.message === 'Network Error') {
+        setError('Cannot connect to server. Please check if backend is running.');
+      } else if (err.response?.status === 401) {
+        setError('Invalid email or password');
+      } else {
+        setError(err.response?.data?.error || err.message || 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -48,9 +61,16 @@ const Login: React.FC = () => {
         {/* Login Form */}
         <div className="bg-gray-900 rounded-lg border border-gray-800 p-8">
           {error && (
-            <div className="bg-red-900/30 border border-red-700 text-red-400 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span>{error}</span>
+            <div className="bg-red-900/30 border border-red-700 text-red-400 px-4 py-3 rounded-lg mb-6 flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">{error}</p>
+                {error.includes('waking up') && (
+                  <p className="text-sm mt-1 text-red-300">
+                    Free tier backends on Render sleep after inactivity. First request takes ~30-60 seconds.
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
@@ -68,6 +88,7 @@ const Login: React.FC = () => {
                   className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-white"
                   placeholder="you@example.com"
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -85,6 +106,7 @@ const Login: React.FC = () => {
                   className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-white"
                   placeholder="••••••••"
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -92,9 +114,16 @@ const Login: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Signing in...</span>
+                </>
+              ) : (
+                'Sign In'
+              )}
             </button>
           </form>
 
@@ -106,6 +135,11 @@ const Login: React.FC = () => {
               </Link>
             </p>
           </div>
+        </div>
+
+        {/* Help text for Render cold starts */}
+        <div className="mt-4 text-center text-sm text-gray-500">
+          <p>First login may take up to 60 seconds while the server starts.</p>
         </div>
       </div>
     </div>
