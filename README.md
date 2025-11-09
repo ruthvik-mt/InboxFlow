@@ -21,25 +21,9 @@ OneBox is a modern email management platform that aggregates multiple email acco
 ---
 
 ## Architecture
-
-```
-┌─────────────────┐
-│  React Frontend │  
-│  (Tailwind CSS) │
-└────────┬────────┘
-         │ REST API
-┌────────┴────────┐
-│  Express.js API │
-│   (TypeScript)  │
-└────────┬────────┘
-         │
-    ┌────┴─────┬──────────┬──────────┐
-    │          │          │          │
-┌───┴───┐  ┌───┴───┐  ┌───┴───┐  ┌───┴────┐
-│MongoDB│  │Elastic│  │Cerebras│ │  Slack │
-│       │  │search │  │   AI   │ │Webhooks│
-└───────┘  └───────┘  └────────┘ └────────┘
-```
+<p align="center">
+  <img src="./frontend/public/onebox-architecture.png" alt="OneBox Architecture" width="900">
+</p>
 
 ---
 
