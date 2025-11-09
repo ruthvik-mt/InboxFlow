@@ -3,10 +3,6 @@
 > **ReachInbox Backend Engineer Assignment**  
 > A feature-rich onebox email aggregator with real-time IMAP synchronization, AI categorization, and advanced search capabilities.
 
-[![Live Demo](https://img.shields.io/badge/demo-live-success)](your-demo-url)
-[![Backend API](https://img.shields.io/badge/API-running-blue)](your-backend-url)
-[![License](https://img.shields.io/badge/license-MIT-green)]()
-
 ---
 
 ## 🎯 Project Overview
