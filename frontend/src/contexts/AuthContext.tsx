@@ -25,7 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log('[AuthContext] Component mounted, checking auth...');
 
-    // define checkAuth inside useEffect to satisfy react-hooks/exhaustive-deps
+    // Define checkAuth inside useEffect to satisfy react-hooks/exhaustive-deps
     const checkAuth = async () => {
       const token = Cookies.get('token');
       
@@ -33,8 +33,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[Auth] Starting authentication check...');
       console.log('[Auth] Token exists in cookie:', !!token);
       console.log('[Auth] Token value (first 20 chars):', token?.substring(0, 20));
-      console.log('[Auth] Current user state:', user);
-      console.log('[Auth] Current loading state:', loading);
       
       if (!token) {
         console.log('[Auth] No token found, user not authenticated');
@@ -64,7 +62,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
         } else {
           console.log('[Auth] Network/server error, keeping token for retry');
-          // Don't clear user on network errors
         }
       } finally {
         console.log('[Auth] Setting loading to false');
@@ -74,10 +71,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     checkAuth();
-    // empty deps: we intentionally run this once on mount
   }, []);
 
-  // Add debug logs when user or loading changes
+  // Debug logs when user or loading changes
   useEffect(() => {
     console.log('[AuthContext] State changed - Loading:', loading, 'User:', user?.email || 'null');
   }, [user, loading]);
@@ -89,7 +85,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('[Auth] Login response received:', response.data);
       
-      // Store token in cookie
       Cookies.set('token', response.data.token, { 
         expires: 7,
         sameSite: 'lax',
@@ -111,7 +106,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[Auth] Attempting registration for:', email);
       const response = await api.post('/auth/register', { email, password, name });
       
-      // Store token in cookie
       Cookies.set('token', response.data.token, { 
         expires: 7,
         sameSite: 'lax',
