@@ -19,7 +19,7 @@ async function getUserAccountEmails(userId: string): Promise<string[]> {
     const db = await getDB();
     const userAccounts = await db
       .collection('emailAccounts')
-      .find({ 
+      .find({
         userId: new ObjectId(userId),
         isActive: true
       })
@@ -76,7 +76,7 @@ router.get('/search', async (req: AuthRequest, res: Response) => {
     const must: any[] = [];
     const filter: any[] = [];
     
-    // ✅ FIX: accountEmail is already a keyword field, no .keyword needed
+    //Fix
     filter.push({ terms: { accountEmail: userAccountEmails } });
     
     if (q) {
@@ -102,13 +102,13 @@ router.get('/search', async (req: AuthRequest, res: Response) => {
 
     console.log('[Search] Query:', JSON.stringify(query, null, 2));
 
-    const esResp = await esClient.search({ 
-      index: 'emails', 
-      body: { 
-        size: 100, 
-        sort: [{ date: { order: 'desc' } }], 
-        query 
-      } 
+    const esResp = await esClient.search({
+      index: 'emails',
+      body: {
+        size: 100,
+        sort: [{ date: { order: 'desc' } }],
+        query
+      }
     });
     
     const body = esPayload(esResp);
@@ -155,7 +155,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const page = Math.max(parseInt((req.query.page as string) || '1', 10), 1);
     const from = (page - 1) * size;
 
-    // ✅ FIX: accountEmail is already a keyword field, no .keyword needed
+    // Fix
     const esResp = await esClient.search({
       index: 'emails',
       body: {

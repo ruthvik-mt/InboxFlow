@@ -25,7 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log('[AuthContext] Component mounted, checking auth...');
 
-    // Define checkAuth inside useEffect to satisfy react-hooks/exhaustive-deps
+    // Define checkAuth
     const checkAuth = async () => {
       const token = Cookies.get('token');
       

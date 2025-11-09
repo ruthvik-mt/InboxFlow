@@ -4,7 +4,7 @@ import { EmailResponse, StatsResponse } from '../types';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
 
-console.log('API Base URL:', API_BASE); // For debugging
+console.log('API Base URL:', API_BASE);
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -12,10 +12,10 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  withCredentials: true, // ✅ Important for cookies
+  withCredentials: true,
 });
 
-// ✅ Add token to requests
+// Add token to requests
 api.interceptors.request.use(
   (config) => {
     const token = Cookies.get('token');

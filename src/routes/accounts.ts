@@ -9,10 +9,10 @@ import { restartImapForUser } from '../services/imapManager';
 
 const router = express.Router();
 
-// All routes require authentication
+// Route protection middleware
 router.use(authenticateToken);
 
-// List user's email accounts
+// Email accounts list
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const db = await getDB();

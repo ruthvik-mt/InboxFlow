@@ -88,7 +88,7 @@ async function initializeElasticsearch() {
 }
 initializeElasticsearch();
 
-// ---------- deterministic id ----------
+// deterministic id
 function makeEsId(email: any) {
   const mid = (email.messageId || '').toString().trim();
   const cleanMid = mid.replace(/[<>]/g, '');
@@ -99,7 +99,7 @@ function makeEsId(email: any) {
   return `${account}:${cleanMid}`;
 }
 
-// ---------- email field normalization ----------
+// email field normalization
 function formatEmailAddressField(value: any): { pretty: string; address: string } {
   if (!value) return { pretty: '', address: '' };
 
@@ -117,7 +117,6 @@ function formatEmailAddressField(value: any): { pretty: string; address: string 
   }
 
   if (typeof value === 'object') {
-    // Normalize common shapes from mailparser / imap
     const addr = value.address || value.email || value.value || value.addr || '';
     const name = value.name || value.displayName || value.personal || '';
     const address = typeof addr === 'string' ? addr : '';
@@ -128,9 +127,8 @@ function formatEmailAddressField(value: any): { pretty: string; address: string 
   return { pretty: String(value), address: '' };
 }
 
-// ---------- main indexing with auto-heal ----------
+// indexing
 export const indexEmail = async (email: any, { useId = true } = {}): Promise<boolean> => {
-  // We'll attempt indexing up to two times when a mapping error occurs (first attempt, auto-heal + retry)
   let attempt = 0;
   const maxAttempt = 2;
 
@@ -182,8 +180,6 @@ export const indexEmail = async (email: any, { useId = true } = {}): Promise<boo
       attempt++;
       console.error('[Elastic] indexing error (full):', err?.message || err);
       if (err?.meta?.body) console.error('[Elastic] meta.body:', JSON.stringify(err.meta.body));
-
-      // Detect mapping/document parsing exception (immutable mapping mismatch)
       const isDocParse = err?.meta?.body?.error?.type === 'document_parsing_exception'
         || (err?.message && /document_parsing_exception/i.test(err.message));
 
@@ -191,31 +187,25 @@ export const indexEmail = async (email: any, { useId = true } = {}): Promise<boo
         console.warn('[Elastic] Detected document_parsing_exception -> attempting auto-heal: delete and recreate index, then retry once');
 
         try {
-          // delete index (best-effort)
           await esClient.indices.delete({ index: ES_INDEX }).catch((e) => {
             console.warn('[Elastic] delete index failed (ignored):', e?.message || e);
           });
 
-          // reinitialize mapping
           await initializeElasticsearch();
 
           console.log('[Elastic] Auto-heal attempted, retrying indexing...');
-          // loop will retry
           continue;
         } catch (healErr: any) {
           console.error('[Elastic] Auto-heal failed:', healErr?.message || healErr);
-          // don't try again
           break;
         }
       }
-
-      // If conflict (409) treat as OK
+      
       if (err?.meta?.statusCode === 409) {
         console.log('[Elastic] duplicate (409) -> ok');
         return true;
       }
-
-      // All other cases -> rethrow after attempts exhausted
+      
       if (attempt >= maxAttempt) {
         throw err;
       }
@@ -225,7 +215,7 @@ export const indexEmail = async (email: any, { useId = true } = {}): Promise<boo
   return false;
 };
 
-// ---------- helpers ----------
+//helpers
 export const searchEmails = async (query: any, options: any = {}) => {
   try {
     return await esClient.search({ index: ES_INDEX, ...options, body: query });

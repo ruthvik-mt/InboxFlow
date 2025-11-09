@@ -59,12 +59,12 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
 
     console.log('[Auth] User registered:', email);
 
-    // ✅ FIX: httpOnly: false so frontend JavaScript can read the cookie
+    //FIX: httpOnly
     res.cookie('token', token, {
-      httpOnly: false, // Changed from true to false
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/',
     });
 
@@ -114,12 +114,12 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
 
     console.log('[Auth] User logged in:', email);
 
-    // ✅ FIX: httpOnly: false so frontend JavaScript can read the cookie
+    // httpOnly
     res.cookie('token', token, {
-      httpOnly: false, // Changed from true to false
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/',
     });
 
@@ -137,7 +137,7 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
   }
 });
 
-// Get current user (for token verification on refresh)
+// Get current user
 router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const db = await getDB();

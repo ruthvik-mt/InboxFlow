@@ -24,20 +24,20 @@ export const authenticateToken = (
     // Check for token in multiple places
     let token: string | undefined;
 
-    // 1. Check Authorization header (Bearer token)
+    // Check Authorization header (Bearer token)
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7);
       console.log('[Auth Middleware] Token found in Authorization header');
     }
 
-    // 2. Check cookie
+    // Check cookie
     if (!token && req.cookies?.token) {
       token = req.cookies.token;
       console.log('[Auth Middleware] Token found in cookie');
     }
 
-    // 3. No token found
+    // No token found
     if (!token) {
       console.log('[Auth Middleware] No token found');
       return res.status(401).json({ error: 'Authentication required' });

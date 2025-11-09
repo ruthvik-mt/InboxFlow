@@ -13,38 +13,14 @@ console.log('='.repeat(60));
 import { connectDB } from './config/database';
 import { initializeAllUsers } from './services/imapManager';
 
-// Env Var Check
-const requiredEnvVars = ['CEREBRAS_API_KEY', 'SLACK_TOKEN', 'SLACK_CHANNEL', 'MONGO_URI', 'JWT_SECRET', 'ENCRYPTION_KEY'];
-const missingVars = requiredEnvVars.filter((v) => !process.env[v]);
-if (missingVars.length > 0) {
-  console.warn('Missing environment variables (service may not work properly):');
-  missingVars.forEach((v) => console.warn(`   - ${v}`));
-} else {
-  console.log('All required environment variables are present.');
-}
-
 // Express setup
 const app = express();
-
-// ✅ Updated CORS configuration
-const allowedOrigins = (
-  process.env.ALLOWED_ORIGINS ||
-  'http://localhost:3000,https://reachinbox-onebox.vercel.app,https://reachinbox-onebox-ai-z353.onrender.com'
-)
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-console.log('Allowed CORS origins:', allowedOrigins);
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, Postman, curl)
       if (!origin) return callback(null, true);
-      
-      // Allow explicitly listed origins
-      if (allowedOrigins.includes(origin)) return callback(null, true);
       
       // Allow all Vercel deployments
       if (/^https?:\/\/(.+\.)?vercel\.app$/.test(origin)) return callback(null, true);
@@ -130,14 +106,14 @@ async function startServer() {
   try {
     // Connect to database
     await connectDB();
-    console.log('✅ Database connected');
+    console.log('Database connected');
 
     // Initialize IMAP connections for all users
     await initializeAllUsers();
-    console.log('✅ IMAP connections initialized');
+    console.log('IMAP connections initialized');
 
     app.listen(PORT, () => {
-      console.log(`\n✅ Server running on port ${PORT}`);
+      console.log(`\nServer running on port ${PORT}`);
       console.log(`Health check: http://localhost:${PORT}/health\n`);
     });
   } catch (err) {
