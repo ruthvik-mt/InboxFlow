@@ -5,36 +5,21 @@
 
 ---
 
-## 🎯 Project Overview
+## Project Overview
 
 OneBox is a modern email management platform that aggregates multiple email accounts into a single intelligent inbox. Built with React, Node.js, Elasticsearch, and AI, it provides real-time synchronization, smart categorization, and powerful search capabilities.
 
-### ✨ Key Features
+### Key Features
 
-- 🔄 **Real-Time IMAP Synchronization** - Connect multiple email accounts with instant updates
-- 🔍 **Elasticsearch-Powered Search** - Find any email in milliseconds
-- 🤖 **AI Email Categorization** - Automatic classification into 5 categories
-- 📢 **Smart Notifications** - Slack alerts and webhook triggers for important emails
-- 🎨 **Modern UI** - Clean, responsive interface with dark mode
-- 🔐 **Secure Authentication** - JWT-based auth with encrypted email passwords
-
+- **Real-Time IMAP Synchronization** - Connect multiple email accounts with instant updates
+- **Elasticsearch-Powered Search** - Find any email in milliseconds
+- **AI Email Categorization** - Automatic classification into 5 categories
+- **Smart Notifications** - Slack alerts and webhook triggers for important emails
+- **Modern UI** - Clean, responsive interface with dark mode
+- **Secure Authentication** - JWT-based auth with encrypted email passwords
 ---
 
-## 🎥 Demo Video
-
-📹 [Watch Demo Video](your-demo-video-link) *(5 minutes)*
-
-**Demo Highlights:**
-- User registration and login
-- Adding email accounts (Gmail, Outlook)
-- Real-time email synchronization
-- AI categorization in action
-- Search and filtering capabilities
-- Slack notification demonstration
-
----
-
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────┐
@@ -49,15 +34,15 @@ OneBox is a modern email management platform that aggregates multiple email acco
          │
     ┌────┴─────┬──────────┬──────────┐
     │          │          │          │
-┌───┴───┐ ┌───┴───┐ ┌───┴───┐ ┌───┴────┐
-│MongoDB│ │Elastic│ │Cerebras│ │  Slack │
-│       │ │search │ │  API   │ │Webhooks│
-└───────┘ └───────┘ └────────┘ └────────┘
+┌───┴───┐  ┌───┴───┐  ┌───┴───┐  ┌───┴────┐
+│MongoDB│  │Elastic│  │Cerebras│ │  Slack │
+│       │  │search │  │  API   │ │Webhooks│
+└───────┘  └───────┘  └────────┘ └────────┘
 ```
 
 ---
 
-## 🚀 Tech Stack
+## Tech Stack
 
 ### Frontend
 - **React 18.2** - UI framework
@@ -80,49 +65,45 @@ OneBox is a modern email management platform that aggregates multiple email acco
 
 ---
 
-## 📋 Features Implemented
+## Features Implemented
 
-### ✅ Feature 1: Real-Time Email Synchronization
+### Feature 1: Real-Time Email Synchronization
 - Connects to multiple IMAP accounts (Gmail, Outlook, etc.)
 - Persistent IMAP connections with IDLE mode
 - Fetches last 30 days of emails
 - Real-time notifications for new emails
 - Per-user account isolation
 
-### ✅ Feature 2: Searchable Storage (Elasticsearch)
+### Feature 2: Searchable Storage (Elasticsearch)
 - Local Elasticsearch instance (Docker)
 - Full-text search across subject, body, sender, recipient
 - Advanced filtering (account, folder, category)
 - Fuzzy matching for typo tolerance
 - Optimized indexing with deterministic document IDs
 
-### ✅ Feature 3: AI-Based Email Categorization
+### Feature 3: AI-Based Email Categorization
 - **Categories**: Interested, Meeting Booked, Not Interested, Spam, Out of Office
 - Powered by Cerebras API (Llama 3.3 70B)
 - Queue-based processing with rate limiting
 - Smart heuristics + AI predictions
 - Confidence scoring and explanations
 
-### ✅ Feature 4: Slack & Webhook Integration
+### Feature 4: Slack & Webhook Integration
 - Automatic Slack notifications for "Interested" emails
 - Webhook triggers for external automation
 - Rate limiting and retry logic
 - Deduplication to prevent spam
 
-### ✅ Feature 5: Frontend Interface
+### Feature 5: Frontend Interface
 - Modern dark-themed UI
 - Email list with category badges
 - Detailed email viewer
 - Advanced search interface
 - Account management dashboard
 - Real-time stats cards
-
-### ❌ Feature 6: AI-Powered Suggested Replies (RAG)
-*Not implemented due to time constraints. Would require vector database and RAG implementation.*
-
 ---
 
-## 🛠️ Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
 - Node.js 22.x or higher
@@ -132,10 +113,9 @@ OneBox is a modern email management platform that aggregates multiple email acco
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/yourusername/onebox-email-aggregator.git
-cd onebox-email-aggregator
+git clone https://github.com/ruthvik-mt/reachinbox-onebox.git
+cd reachinbox-onebox
 ```
-
 ### 2. Backend Setup
 
 ```bash
@@ -156,23 +136,56 @@ nano .env
 
 **Required Environment Variables:**
 ```env
-# Database
-MONGO_URI=mongodb://localhost:27017/onebox
+# DATABASE
+MONGO_URI=your_mongodb_connection_string_here
 
-# Security
-JWT_SECRET=your_random_secret_key_here
-ENCRYPTION_KEY=your_32_byte_hex_key_here
+# SECURITY
+JWT_SECRET=your_jwt_secret_here
+ENCRYPTION_KEY=your_encryption_key_here
 
-# AI
-CEREBRAS_API_KEY=your_cerebras_api_key_here
-
-# Elasticsearch
-ELASTICSEARCH_URL=http://localhost:9200
-
-# Notifications
-SLACK_TOKEN=xoxb-your-slack-bot-token
+# SLACK CONFIGURATION
+SLACK_TOKEN=your_slack_token_here
 SLACK_CHANNEL=all-mail
-WEBHOOK_URL=https://webhook.site/your-unique-url
+
+#WEBHOOK
+WEBHOOK_URL=your_webhook_url_here
+
+#SLACK RATE LIMITING
+SLACK_CONCURRENCY=1
+SLACK_INTERVAL_CAP=1
+SLACK_INTERVAL_MS=3000
+SLACK_DEDUPE_TTL_MS=86400000
+
+# WEBHOOK RATE LIMITING
+WEBHOOK_CONCURRENCY=1
+WEBHOOK_INTERVAL_CAP=1
+WEBHOOK_INTERVAL_MS=2000
+WEBHOOK_DEDUPE_TTL_MS=300000
+
+# CEREBRAS AI CONFIG
+CEREBRAS_API_KEY=your_cerebras_api_key_here
+CEREBRAS_URL=https://api.cerebras.ai/v1/chat/completions
+CEREBRAS_MODEL=llama-3.3-70b
+CEREBRAS_RPS=0.2
+CEREBRAS_CONCURRENCY=1
+CEREBRAS_MAX_RETRIES=3
+CEREBRAS_BACKOFF_MS=5000
+CEREBRAS_JITTER_MS=2000
+CEREBRAS_TIMEOUT_MS=30000
+CEREBRAS_MAX_EMAIL_CHARS=4000
+
+#EMAIL BATCH PROCESSING
+EMAIL_BATCH_SIZE=10
+EMAIL_BATCH_DELAY_MS=30000
+
+#ELASTICSEARCH CONFIG
+ELASTICSEARCH_URL=https://your_elasticsearch_endpoint_here
+ELASTICSEARCH_INDEX=emails
+ELASTICSEARCH_APIKEY=your_elasticsearch_api_key_here
+
+#SERVER
+PORT=5000
+
 ```
 
 **Start Backend:**
@@ -195,17 +208,16 @@ cd ../frontend
 npm install
 
 # Create .env file
-echo "REACT_APP_API_BASE=http://localhost:5000" > .env
+REACT_APP_API_BASE=BACKEND_URL
 
 # Start development server
 npm start
 ```
-
 App runs at: `http://localhost:3000`
 
 ---
 
-## 🔧 Configuration Guide
+## Configuration Guide
 
 ### Gmail Setup (App Password)
 
@@ -233,7 +245,7 @@ App runs at: `http://localhost:3000`
 
 ---
 
-## 📡 API Documentation
+## API Documentation
 
 ### Authentication
 ```bash
@@ -280,7 +292,7 @@ curl -X GET "http://localhost:5000/emails?days=30&size=100" \
 
 ---
 
-## 📊 System Monitoring
+## System Monitoring
 
 ### Health Checks
 
@@ -316,7 +328,7 @@ curl http://localhost:5000/stats
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ### Manual Testing Checklist
 
@@ -359,7 +371,7 @@ curl http://localhost:5000/stats
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 onebox-email-aggregator/
@@ -417,7 +429,7 @@ onebox-email-aggregator/
 
 ---
 
-## 🔒 Security Features
+## Security Features
 
 - **JWT Authentication** - Secure token-based auth with 7-day expiry
 - **Password Hashing** - bcrypt with salt rounds
@@ -429,17 +441,7 @@ onebox-email-aggregator/
 
 ---
 
-## 🐛 Known Issues & Limitations
-
-1. **No RAG Implementation** - Feature 6 not completed due to time constraints
-2. **Elasticsearch Local Only** - Production needs hosted Elasticsearch
-3. **No Email Sending** - Read-only implementation
-4. **Polling-based Refresh** - No WebSocket implementation (uses 30s intervals)
-5. **HTML Email Parsing** - Complex HTML emails may lose formatting
-
----
-
-## 🚀 Deployment
+## Deployment
 
 ### Backend (Render/Railway)
 
@@ -468,7 +470,7 @@ onebox-email-aggregator/
 
 ---
 
-## 📈 Performance Metrics
+## Performance Metrics
 
 - **Email Sync**: < 10 seconds for initial fetch
 - **Search**: < 50ms response time
@@ -478,53 +480,15 @@ onebox-email-aggregator/
 
 ---
 
-## 🤝 Contributing
-
-This is an assignment project, but feedback is welcome!
+## Contributing
 
 1. Fork the repository
 2. Create feature branch (`git checkout -b feature/AmazingFeature`)
 3. Commit changes (`git commit -m 'Add AmazingFeature'`)
 4. Push to branch (`git push origin feature/AmazingFeature`)
 5. Open Pull Request
-
+   
 ---
 
-## 📄 License
-
-This project is created as part of the ReachInbox Backend Engineer assignment.
-
----
-
-## 👤 Author
-
-**Your Name**
-- Email: your.email@example.com
-- LinkedIn: [your-linkedin](https://linkedin.com/in/your-profile)
-- GitHub: [@yourusername](https://github.com/yourusername)
-
----
-
-## 🙏 Acknowledgments
-
-- ReachInbox team for the challenging assignment
-- Cerebras for AI API access
-- Elasticsearch for powerful search capabilities
-- Slack for notification infrastructure
-
----
-
-## 📞 Support
-
-For questions or issues:
-- Create an issue in this repository
-- Email: your.email@example.com
-
----
-
-**⭐ If you found this project interesting, please star the repository!**
-
----
-
-*Built with ❤️ using React, Node.js, Elasticsearch, and AI*  
-*January 2025*
+*Built with ❤️ using React, Node.js, TypeScript & AI*  
+*November 2025*
