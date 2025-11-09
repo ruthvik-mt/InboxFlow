@@ -5,6 +5,7 @@ import { categorizeEmail } from './aiService';
 import { notifySlack, triggerWebhook } from './notificationService';
 import { Readable } from 'stream';
 import { decrypt } from '../utils/encryption';
+import { notifySlackAndWebhook } from './notificationService';
 
 interface Email {
   from: string;
@@ -77,14 +78,10 @@ async function processEmailQueue() {
       }
 
       if (email.category === 'Interested') {
-        notifySlack(email).catch((e) =>
-          console.error(`[${email.account}] Slack notify error:`, e)
-        );
-        triggerWebhook(email).catch((e) =>
-          console.error(`[${email.account}] Webhook notify error:`, e)
-        );
-      }
-
+      notifySlackAndWebhook(email, this.userId).catch((e) =>
+      console.error(`[${email.account}] Notification error:`, e)
+       );
+     }
       console.log(`[${email.account}] ${email.subject || '(no subject)'} | ${email.category}`);
 
       processedCount++;

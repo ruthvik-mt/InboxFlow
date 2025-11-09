@@ -46,6 +46,7 @@ app.use(cookieParser());
 import authRouter from './routes/auth';
 import accountsRouter from './routes/accounts';
 import emailsRouter from './routes/emails';
+import notificationsRouter from './routes/notifications'; // NEW
 import { checkElasticsearchHealth } from './services/elasticService';
 import { getAiQueueStats } from './services/aiService';
 
@@ -53,6 +54,7 @@ import { getAiQueueStats } from './services/aiService';
 app.use('/auth', authRouter);
 app.use('/accounts', accountsRouter);
 app.use('/emails', emailsRouter);
+app.use('/notifications', notificationsRouter); // NEW
 
 app.get('/', (_req: Request, res: Response) =>
   res.send('ReachInbox Onebox Backend - running')

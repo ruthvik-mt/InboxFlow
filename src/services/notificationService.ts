@@ -3,6 +3,8 @@ import { WebClient } from '@slack/web-api';
 import axios, { AxiosError } from 'axios';
 import PQueue from 'p-queue';
 import 'dotenv/config';
+import { getDB } from '../config/database';
+import { ObjectId } from 'mongodb';
 
 const SLACK_TOKEN = process.env.SLACK_TOKEN || '';
 const SLACK_CHANNEL_RAW = process.env.SLACK_CHANNEL || '';
@@ -11,7 +13,7 @@ const WEBHOOK_URL = process.env.WEBHOOK_URL || '';
 // Slack Rate limiting
 const SLACK_CONCURRENCY = Number(process.env.SLACK_CONCURRENCY || 1);
 const SLACK_INTERVAL_CAP = Number(process.env.SLACK_INTERVAL_CAP || 1);
-const SLACK_INTERVAL_MS = Number(process.env.SLACK_INTERVAL_MS || 3000); // 1 req per 3 sec = 20/min
+const SLACK_INTERVAL_MS = Number(process.env.SLACK_INTERVAL_MS || 3000);
 
 const WEBHOOK_CONCURRENCY = Number(process.env.WEBHOOK_CONCURRENCY || 1);
 const WEBHOOK_INTERVAL_CAP = Number(process.env.WEBHOOK_INTERVAL_CAP || 1);
@@ -99,6 +101,36 @@ setInterval(() => {
 
 function sleep(ms: number) {
   return new Promise((res) => setTimeout(res, ms));
+}
+
+// Save notification to database
+async function saveNotification(
+  userId: string,
+  email: any,
+  slackSuccess: boolean,
+  webhookSuccess: boolean
+) {
+  try {
+    const db = await getDB();
+    
+    const notification = {
+      userId: new ObjectId(userId),
+      emailId: email._id || email.messageId || '',
+      subject: email.subject || '(No Subject)',
+      from: formatFromField(email.from),
+      category: email.category || 'Interested',
+      account: email.accountEmail || email.account || 'Unknown',
+      timestamp: new Date(),
+      slackSent: slackSuccess,
+      webhookSent: webhookSuccess,
+      read: false,
+    };
+
+    await db.collection('notifications').insertOne(notification);
+    console.log('[Notification] Saved to database for user:', userId);
+  } catch (err) {
+    console.error('[Notification] Failed to save:', err);
+  }
 }
 
 // Slack sender with retry logic
@@ -281,4 +313,15 @@ export const triggerWebhook = async (email: any): Promise<boolean> => {
     webhookSentCache.delete(key);
     return false;
   });
+};
+
+// NEW: Combined notification function with userId
+export const notifySlackAndWebhook = async (email: any, userId: string): Promise<{ slackSuccess: boolean; webhookSuccess: boolean }> => {
+  const slackSuccess = await notifySlack(email);
+  const webhookSuccess = WEBHOOK_URL ? await triggerWebhook(email) : false;
+  
+  // Save notification to database
+  await saveNotification(userId, email, slackSuccess, webhookSuccess);
+  
+  return { slackSuccess, webhookSuccess };
 };

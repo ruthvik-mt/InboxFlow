@@ -9,6 +9,7 @@ import AccountManager from '../components/AccountManager';
 import { useAuth } from '../contexts/AuthContext';
 import { emailAPI } from '../services/api';
 import { Email, StatsResponse } from '../types';
+import NotificationBell from '../components/NotificationBell';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -156,88 +157,80 @@ function Dashboard() {
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
       <header className="bg-gray-900 border-b border-gray-800 sticky top-0 z-10 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          {/* Title Section */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <img
-                src="/OneMail.png"
-                alt="Logo"
-                className="w-10 h-10"
-              />
-              <div>
-                <h1 className="text-2xl font-bold text-white">OneBox Dashboard</h1>
-                <p className="text-sm text-gray-400">
-                  {user?.name ? `Welcome, ${user.name}` : 'Email Management Console'}
-                </p>
-              </div>
-            </div>
+  <div className="max-w-7xl mx-auto px-4 py-4">
+    {/* Top row: Title (left) + Icon cluster (right) */}
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center gap-3">
+        <img src="/OneMail.png" alt="Logo" className="w-10 h-10" />
+        <div>
+          <h1 className="text-2xl font-bold text-white">OneBox Dashboard</h1>
+          <p className="text-sm text-gray-400">
+            {user?.name ? `Welcome, ${user.name}` : 'Email Management Console'}
+          </p>
+        </div>
+      </div>
 
-            {/* Status Indicators & Actions */}
-            <div className="flex items-center gap-4">
-              {/* Settings Button */}
-              <button
-                onClick={() => setShowAccountManager(true)}
-                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-                title="Manage Email Accounts"
-              >
-                <Settings className="w-5 h-5 text-gray-400 hover:text-white" />
-              </button>
+      {/* Right-aligned compact icon cluster (close to AI Queue) */}
+      <div className="flex items-center gap-3">
+        {/* AI Queue badge */}
+        {stats?.ai && (
+          <div className="flex items-center gap-2 bg-gray-800 border border-gray-700 px-3 py-1.5 rounded-lg">
+            <span className="text-sm text-gray-300">
+              <span className="font-medium">AI Queue:</span>{' '}
+              {stats.ai.queueLength || stats.cerebras?.queueLength || 0}
+            </span>
+          </div>
+        )}
 
-              {/* Logout Button */}
-              <button
-                onClick={handleLogout}
-                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-                title="Logout"
-              >
-                <LogOut className="w-5 h-5 text-gray-400 hover:text-white" />
-              </button>
-
-              {/* Online Status */}
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
-                isOnline ? 'bg-green-900/30 text-green-400 border border-green-700' : 'bg-red-900/30 text-red-400 border border-red-700'
-              }`}>
-                {isOnline ? (
-                  <>
-                    <Wifi className="w-4 h-4" />
-                    <span className="text-sm font-medium">Online</span>
-                  </>
-                ) : (
-                  <>
-                    <WifiOff className="w-4 h-4" />
-                    <span className="text-sm font-medium">Offline</span>
-                  </>
-                )}
-              </div>
-
-              {/* Queue Stats */}
-              {stats?.ai && (
-                <div className="bg-gray-800 border border-gray-700 px-3 py-1.5 rounded-lg">
-                  <span className="text-sm text-gray-300">
-                    <span className="font-medium">AI Queue:</span>{' '}
-                    {stats.ai.queueLength || stats.cerebras?.queueLength || 0}
-                  </span>
-                </div>
-              )}
-            </div>
+        {/* Icons grouped tightly */}
+        <div className="flex items-center gap-2 bg-transparent p-1 rounded">
+          <div className="p-1 rounded hover:bg-gray-800 cursor-pointer">
+            <NotificationBell />
           </div>
 
-          {/* Search Bar */}
-          <SearchBar
-            onSearch={searchEmails}
-            onRefresh={handleRefresh}
-            loading={loading}
-            accounts={accounts}
-            folders={folders}
-            selectedAccount={selectedAccount}
-            selectedFolder={selectedFolder}
-            selectedCategory={selectedCategory}
-            onAccountChange={setSelectedAccount}
-            onFolderChange={setSelectedFolder}
-            onCategoryChange={setSelectedCategory}
-          />
+          <button
+            onClick={() => setShowAccountManager(true)}
+            className="p-1 hover:bg-gray-800 rounded transition-colors"
+            title="Manage Email Accounts"
+          >
+            <Settings className="w-5 h-5 text-gray-300" />
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="p-1 hover:bg-gray-800 rounded transition-colors"
+            title="Logout"
+          >
+            <LogOut className="w-5 h-5 text-gray-300" />
+          </button>
+
+          {/* Online Status compact */}
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm ${
+            isOnline ? 'bg-green-900/20 text-green-300 border border-green-700' : 'bg-red-900/20 text-red-300 border border-red-700'
+          }`}>
+            {isOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+            <span className="font-medium">{isOnline ? 'Online' : 'Offline'}</span>
+          </div>
         </div>
-      </header>
+      </div>
+    </div>
+
+    {/* Search Bar (keeps previous placement under title row) */}
+    <SearchBar
+      onSearch={searchEmails}
+      onRefresh={handleRefresh}
+      loading={loading}
+      accounts={accounts}
+      folders={folders}
+      selectedAccount={selectedAccount}
+      selectedFolder={selectedFolder}
+      selectedCategory={selectedCategory}
+      onAccountChange={setSelectedAccount}
+      onFolderChange={setSelectedFolder}
+      onCategoryChange={setSelectedCategory}
+    />
+  </div>
+</header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
