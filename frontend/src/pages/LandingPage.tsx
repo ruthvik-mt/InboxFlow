@@ -77,7 +77,7 @@ const LandingPage: React.FC = () => {
               className="w-10 h-10"
               />
               <div>
-                <span className="text-2xl font-bold">OneBox</span>
+                <span className="text-2xl font-bold">InboxFlow</span>
               </div>
             </div>
 
@@ -231,7 +231,7 @@ const LandingPage: React.FC = () => {
           <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-4xl md:text-5xl font-bold mb-6">
-                Why Choose OneBox?
+                Why Choose InboxFlow?
               </h2>
               <div className="space-y-6">
                 <div className="flex items-start gap-4">
@@ -295,13 +295,13 @@ const LandingPage: React.FC = () => {
               Ready to Transform Your Inbox?
             </h2>
             <p className="text-lg text-gray-800 mb-10 max-w-2xl mx-auto">
-              Join thousands of professionals managing their emails smarter with OneBox
+              Join thousands of professionals managing their emails smarter with InboxFlow
             </p>
             <button
               onClick={() => navigate('/dashboard')}
               className="bg-black text-white px-10 py-5 rounded-lg font-bold text-lg hover:bg-gray-900 transition-all inline-flex items-center gap-3 shadow-lg"
             >
-              Start Using OneBox
+              Start Using InboxFlow
               <ArrowRight className="w-5 h-5" />
             </button>
           </div>
@@ -318,10 +318,10 @@ const LandingPage: React.FC = () => {
                alt="Logo"
                className="w-10 h-10"
                />
-              <span className="text-xl font-bold">OneBox</span>
+              <span className="text-xl font-bold">InboxFlow</span>
             </div>
             <p className="text-gray-400 text-sm text-center">
-              © 2025 OneBox. All rights reserved.
+              © 2025 InboxFlow. All rights reserved.
             </p>
           </div>
         </div>
