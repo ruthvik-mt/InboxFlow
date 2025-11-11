@@ -55,7 +55,7 @@ const Login: React.FC = () => {
         <div className="text-center mb-8">
           <img src="/OneMail.png" alt="Logo" className="w-16 h-16 mx-auto mb-4" />
           <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
-          <p className="text-gray-400">Sign in to your OneBox account</p>
+          <p className="text-gray-400">Sign in to your InboxFlow account</p>
         </div>
 
         {/* Login Form */}
