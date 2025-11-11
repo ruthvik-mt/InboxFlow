@@ -6,7 +6,7 @@ A feature-rich email aggregator with real-time IMAP synchronization, AI categori
 
 ## Project Overview
 
-OneBox is a modern email management platform that aggregates multiple email accounts into a single intelligent inbox. Built with React, Node.js, Elasticsearch and AI, it provides real-time synchronization, smart categorization and powerful search capabilities.
+InboxFlow is a modern email management platform that aggregates multiple email accounts into a single intelligent inbox. Built with React, Node.js, Elasticsearch and AI, it provides real-time synchronization, smart categorization and powerful search capabilities.
 
 ---
 
