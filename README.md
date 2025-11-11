@@ -1,4 +1,4 @@
-# OneBox - AI-Powered Email Aggregator
+# InboxFlow - AI-Powered Email Aggregator
 
 A feature-rich onebox email aggregator with real-time IMAP synchronization, AI categorization and advanced search capabilities.
 
@@ -98,8 +98,8 @@ OneBox is a modern email management platform that aggregates multiple email acco
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/ruthvik-mt/reachinbox-onebox.git
-cd reachinbox-onebox
+git clone https://github.com/ruthvik-mt/InboxFlow.git
+cd InboxFlow
 ```
 ### 2. Backend Setup
 
@@ -359,7 +359,7 @@ curl http://localhost:5000/stats
 ## Project Structure
 
 ```
-onebox-email-aggregator/
+InboxFlow/
 ├── backend/
 │   ├── src/
 │   │   ├── config/
