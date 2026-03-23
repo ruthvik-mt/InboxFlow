@@ -34,7 +34,6 @@ function addressToString(addr: any): string {
   return addr?.address || addr?.value || addr?.text || '';
 }
 
-// Exact match only — no substring matching to avoid false positives
 function normalizeCategory(raw: any): string {
   const s = String(raw || '').trim().toLowerCase();
   if (s.includes('meeting booked')) return 'Meeting Booked';
@@ -74,9 +73,11 @@ async function processEmailQueue() {
       }
 
       if (email.category === 'Interested') {
-        notifySlackAndWebhook(email, userId).catch((e) =>
-          logger.error(`[${email.account}] Notification error:`, e)
-        );
+        try {
+          await notifySlackAndWebhook(email, userId);
+        } catch (e) {
+          logger.error(`[${email.account}] Notification error:`, e);
+        }
       }
 
       logger.info(`[${email.account}] ${email.subject || '(no subject)'} | ${email.category}`);
@@ -120,6 +121,13 @@ export class ImapService {
   public userId: string;
   public accountId: string;
 
+  // ✅ ADDED: reconnect tracking for exponential backoff
+  private reconnectAttempts: number = 0;
+  private readonly MAX_RECONNECT = 10;
+
+  // ✅ ADDED: store imap config for re-creating instance on reconnect
+  private readonly imapConfig: Imap.Config;
+
   constructor(
     user: string,
     encryptedPassword: string,
@@ -136,19 +144,25 @@ export class ImapService {
 
     const password = decrypt(encryptedPassword);
 
-    this.imap = new Imap({
+    // ✅ ADDED: save config so we can recreate imap instance on reconnect
+    this.imapConfig = {
       user,
       password,
       host,
       port,
       tls: true,
       tlsOptions: { rejectUnauthorized: false },
-    });
+    };
+
+    this.imap = new Imap(this.imapConfig);
   }
 
   public connectAndListen() {
     this.imap.once('ready', () => {
       this.isConnected = true;
+      // ✅ ADDED: reset reconnect counter on successful connection
+      this.reconnectAttempts = 0;
+
       this.openInbox((err, box) => {
         if (err) {
           logger.error(`[${this.accountName}] Failed to open inbox:`, err);
@@ -170,9 +184,28 @@ export class ImapService {
       this.isConnected = false;
     });
 
+    // ✅ CHANGED: was just logging + setting isConnected = false (silent failure on drop)
+    // Now auto-reconnects with exponential backoff (2s → 4s → 8s... max 30s)
+    // and stops after MAX_RECONNECT attempts to avoid infinite loops
     this.imap.once('end', () => {
-      logger.info(`[${this.accountName}] IMAP connection ended`);
       this.isConnected = false;
+
+      if (this.reconnectAttempts < this.MAX_RECONNECT) {
+        this.reconnectAttempts++;
+        const delay = Math.min(1000 * 2 ** this.reconnectAttempts, 30000);
+        logger.warn(
+          `[${this.accountName}] IMAP connection ended. Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempts}/${this.MAX_RECONNECT})...`
+        );
+        setTimeout(() => {
+          // ✅ ADDED: must recreate imap instance — imap.js does not allow reuse after end
+          this.imap = new Imap(this.imapConfig);
+          this.connectAndListen();
+        }, delay);
+      } else {
+        logger.error(
+          `[${this.accountName}] Max reconnect attempts (${this.MAX_RECONNECT}) reached. Manual intervention needed.`
+        );
+      }
     });
 
     this.imap.connect();
@@ -236,7 +269,6 @@ export class ImapService {
 
             if (dedupeKey && processedMessageIds.has(dedupeKey)) return;
 
-            // Persistent check in ES (handles server restarts)
             const exists = await isEmailIndexed(
               msgId,
               currentLoginEmail,

@@ -104,6 +104,10 @@ function sleep(ms: number) {
 }
 
 // Save notification to database
+// CHANGED: uses upsert (updateOne + upsert:true) instead of insertOne.
+// This means: if a notification for the same userId+messageId already exists,
+// it updates it instead of throwing a duplicate key error.
+// Combined with the unique index in database.ts, this gives full idempotency.
 async function saveNotification(
   userId: string,
   email: any,
@@ -112,11 +116,13 @@ async function saveNotification(
 ) {
   try {
     const db = await getDB();
-    
+
+    const messageId = email.messageId || '';
+
     const notification = {
       userId: new ObjectId(userId),
-      emailId: email._id || email.messageId || '',
-      messageId: email.messageId || '',
+      emailId: email._id || messageId,
+      messageId,
       subject: email.subject || '(No Subject)',
       from: formatFromField(email.from),
       category: email.category || 'Interested',
@@ -127,9 +133,35 @@ async function saveNotification(
       read: false,
     };
 
-    await db.collection('notifications').insertOne(notification);
+    // Use upsert so re-processing the same email never throws a duplicate error.
+    // $set updates delivery status; $setOnInsert preserves original timestamp.
+    await db.collection('notifications').updateOne(
+      { userId: new ObjectId(userId), messageId },
+      {
+        $set: {
+          slackSent: slackSuccess,
+          webhookSent: webhookSuccess,
+          subject: notification.subject,
+          from: notification.from,
+          category: notification.category,
+          account: notification.account,
+        },
+        $setOnInsert: {
+          emailId: notification.emailId,
+          timestamp: notification.timestamp,
+          read: false,
+        },
+      },
+      { upsert: true }
+    );
+
     logger.info('[Notification] Saved to database for user:', userId);
-  } catch (err) {
+  } catch (err: any) {
+    // Error code 11000 = duplicate key — safe to ignore, already exists
+    if (err?.code === 11000) {
+      logger.warn('[Notification] Duplicate notification skipped (already exists)');
+      return;
+    }
     logger.error('[Notification] Failed to save:', err);
   }
 }
@@ -148,7 +180,7 @@ export const notifySlack = async (email: any): Promise<boolean> => {
 
   const fromStr = formatFromField(email.from);
   const key = email.messageId || `${(email.subject || '').slice(0, 200)}|${fromStr}`;
-  
+
   if (!shouldSend(slackSentCache, key, SLACK_DEDUPE_TTL_MS)) {
     return false;
   }
@@ -156,7 +188,7 @@ export const notifySlack = async (email: any): Promise<boolean> => {
   return slackQueue.add(async () => {
     const maxRetries = 4;
     const baseDelay = 2000;
-    
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         const slackAccountDisplay = email.accountEmail || email.account || 'unknown-account';
@@ -182,16 +214,16 @@ export const notifySlack = async (email: any): Promise<boolean> => {
         }
       } catch (err: any) {
         const errorCode = err?.data?.error || err?.code || err?.message || 'unknown';
-        
+
         if (errorCode === 'rate_limited' || err?.data?.error === 'rate_limited') {
           const retryAfter = err?.data?.retry_after || (attempt + 1) * 3;
           const waitMs = retryAfter * 1000;
-          
+
           logger.warn(
             `[Slack] Rate limited on attempt ${attempt}. ` +
             `Waiting ${waitMs}ms before retry...`
           );
-          
+
           if (attempt < maxRetries) {
             await sleep(waitMs);
             continue;
@@ -199,10 +231,10 @@ export const notifySlack = async (email: any): Promise<boolean> => {
         }
 
         if (errorCode === 'channel_not_found') {
-          logger.error('[Slack] channel_not_found â€” fix suggestions:');
-          logger.error('  â€¢ Use channel name without "#" (e.g. all-mail) OR channel ID (C01234567)');
-          logger.error('  â€¢ Invite bot to channel: /invite @your-bot');
-          logger.error('  â€¢ Ensure bot has chat:write scope');
+          logger.error('[Slack] channel_not_found — fix suggestions:');
+          logger.error('  • Use channel name without "#" (e.g. all-mail) OR channel ID (C01234567)');
+          logger.error('  • Invite bot to channel: /invite @your-bot');
+          logger.error('  • Ensure bot has chat:write scope');
           slackSentCache.delete(key);
           return false;
         }
@@ -259,7 +291,7 @@ export const triggerWebhook = async (email: any): Promise<boolean> => {
 
   const fromStr = formatFromField(email.from);
   const key = email.messageId || `${(email.subject || '').slice(0, 200)}|${fromStr}`;
-  
+
   if (!shouldSend(webhookSentCache, key, WEBHOOK_DEDUPE_TTL_MS)) {
     return false;
   }
@@ -304,7 +336,7 @@ export const triggerWebhook = async (email: any): Promise<boolean> => {
           webhookSentCache.delete(key);
           return false;
         }
-        
+
         const delay = Math.min(baseDelay * Math.pow(2, attempt) + Math.floor(Math.random() * 500), maxDelay);
         logger.warn(`[Webhook] Network error. Retry in ${delay}ms (attempt ${attempt + 1})`);
         await sleep(delay);
@@ -316,15 +348,13 @@ export const triggerWebhook = async (email: any): Promise<boolean> => {
   });
 };
 
-// NEW: Combined notification function with userId
+// Combined notification function with userId
 export const notifySlackAndWebhook = async (email: any, userId: string): Promise<{ slackSuccess: boolean; webhookSuccess: boolean }> => {
   const slackSuccess = await notifySlack(email);
   const webhookSuccess = WEBHOOK_URL ? await triggerWebhook(email) : false;
-  
+
   // Save notification to database
   await saveNotification(userId, email, slackSuccess, webhookSuccess);
-  
+
   return { slackSuccess, webhookSuccess };
 };
-
-

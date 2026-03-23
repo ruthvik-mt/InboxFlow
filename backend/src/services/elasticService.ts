@@ -4,7 +4,13 @@ import { Client } from '@elastic/elasticsearch';
 const ES_URL = process.env.ELASTICSEARCH_URL || 'http://localhost:9200';
 const ES_INDEX = process.env.ELASTICSEARCH_INDEX || 'emails';
 const ES_APIKEY = process.env.ELASTICSEARCH_APIKEY || process.env.ELASTICSEARCH_API_KEY;
-const ES_DEBUG_REFRESH = (process.env.ES_DEBUG_REFRESH || 'true') === 'true';
+
+// CHANGED: default is now 'false' for production performance.
+// 'wait_for' refresh blocks the index call until the doc is visible in search —
+// fine for debugging but adds ~1s latency per email in production.
+// Set ES_DEBUG_REFRESH=true in .env only when debugging locally.
+const ES_DEBUG_REFRESH = (process.env.ES_DEBUG_REFRESH || 'false') === 'true';
+
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 3000;
 
@@ -310,7 +316,7 @@ export const isEmailIndexed = async (
       subject: subject || '',
       date: date || new Date()
     });
-    
+
     const direct = await fetchByEsId(id);
     if (direct) return true;
 
